@@ -9,9 +9,9 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-interaction --prefer-dist --no-scripts --no-dev
 COPY . .
-RUN composer dump-autoload --optimize \
-    && chmod +x /usr/local/bin/docker-entrypoint
+RUN composer dump-autoload --optimize
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+RUN chmod +x /usr/local/bin/docker-entrypoint
 ENTRYPOINT ["docker-entrypoint"]
 CMD ["php-fpm"]
