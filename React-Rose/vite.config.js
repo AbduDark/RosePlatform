@@ -13,9 +13,12 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "https://api.rose-academy.com",
+        target: process.env.VITE_API_PROXY_TARGET || "http://nginx",
         changeOrigin: true,
-        secure: false,
+      },
+      "/storage": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://nginx",
+        changeOrigin: true,
       },
     },
   },
