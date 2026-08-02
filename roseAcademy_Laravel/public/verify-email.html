@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد البريد الإلكتروني - Rose Academy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            direction: rtl;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .email-display {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: right;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 2px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .timer {
+            color: #dc3545;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        .resend-info {
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🌹</div>
+        <h1>تأكيد البريد الإلكتروني</h1>
+        <p class="subtitle">أدخل رمز التحقق المرسل إلى بريدك الإلكتروني</p>
+        
+        <div class="email-display" id="emailDisplay"></div>
+        
+        <div id="messageContainer"></div>
+        
+        <form id="verifyForm">
+            <div class="form-group">
+                <label for="pin">رمز التحقق (6 أرقام)</label>
+                <input type="text" id="pin" name="pin" maxlength="6" pattern="[0-9]{6}" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="verifyBtn">
+                تأكيد البريد الإلكتروني
+            </button>
+        </form>
+        
+        <button type="button" class="btn btn-secondary" id="resendBtn">
+            إعادة إرسال الرمز
+        </button>
+        
+        <div class="timer" id="timer"></div>
+        
+        <div class="resend-info">
+            صالح لمدة 5 دقائق • تحقق من البريد المزعج إذا لم تجد الرسالة
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let resendTimer = null;
+        let resendCooldown = 60;
+
+        // Get email from URL parameters or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email') || localStorage.getItem('userEmail');
+
+        if (!email) {
+            window.location.href = '/';
+        }
+
+        document.getElementById('emailDisplay').textContent = email;
+
+        // Form submission
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const pin = document.getElementById('pin').value;
+            const verifyBtn = document.getElementById('verifyBtn');
+            
+            if (pin.length !== 6) {
+                showMessage('يجب أن يكون رمز التحقق 6 أرقام', 'error');
+                return;
+            }
+            
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'جاري التحقق...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/verify-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        pin: pin
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('تم تأكيد البريد الإلكتروني بنجاح! جاري التحويل...', 'success');
+                    localStorage.removeItem('userEmail');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showMessage(data.message || 'حدث خطأ في التحقق', 'error');
+                }
+            } catch (error) {
+                showMessage('حدث خطأ في الاتصال', 'error');
+            } finally {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'تأكيد البريد الإلكتروني';
+            }
+        });
+
+        // Resend PIN
+        document.getElementById('resendBtn').addEventListener('click', async () => {
+            const resendBtn = document.getElementById('resendBtn');
+            
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'جاري الإرسال...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/resend-pin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('تم إعادة إرسال رمز التحقق', 'success');
+                    startResendCooldown();
+                } else {
+                    showMessage(data.error || data.message || 'فشل في إعادة الإرسال', 'error');
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'إعادة إرسال الرمز';
+                }
+            } catch (error) {
+                showMessage('حدث خطأ في الاتصال', 'error');
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'إعادة إرسال الرمز';
+            }
+        });
+
+        function showMessage(message, type) {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = `<div class="message ${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        function startResendCooldown() {
+            const resendBtn = document.getElementById('resendBtn');
+            const timerDiv = document.getElementById('timer');
+            
+            resendCooldown = 60;
+            resendBtn.disabled = true;
+            
+            resendTimer = setInterval(() => {
+                resendCooldown--;
+                timerDiv.textContent = `يمكنك إعادة الإرسال خلال ${resendCooldown} ثانية`;
+                resendBtn.textContent = `إعادة إرسال الرمز (${resendCooldown})`;
+                
+                if (resendCooldown <= 0) {
+                    clearInterval(resendTimer);
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'إعادة إرسال الرمز';
+                    timerDiv.textContent = '';
+                }
+            }, 1000);
+        }
+
+        // Auto-focus on PIN input
+        document.getElementById('pin').focus();
+
+        // Only allow numbers in PIN input
+        document.getElementById('pin').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+
+        // Auto-submit when 6 digits are entered
+        document.getElementById('pin').addEventListener('input', (e) => {
+            if (e.target.value.length === 6) {
+                document.getElementById('verifyForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

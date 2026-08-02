@@ -1,0 +1,53 @@
+# --------------------------------------------------
+# Environment & Sensitive Files
+# --------------------------------------------------
+.env
+.env.*
+.env.example
+.env.docker
+
+
+# --------------------------------------------------
+# Node & Frontend Dependencies / Builds
+# --------------------------------------------------
+node_modules/
+React-Rose/node_modules/
+React-Rose/dist/
+React-Rose/dist-ssr/
+React-Rose/.env
+React-Rose/.env.example
+React-Rose/.env.local
+React-Rose/.env.production
+
+# --------------------------------------------------
+# Laravel Backend Dependencies & Storage
+# --------------------------------------------------
+roseAcademy_Laravel/vendor/
+roseAcademy_Laravel/.env
+roseAcademy_Laravel/.env.example
+roseAcademy_Laravel/public/storage
+roseAcademy_Laravel/public/uploads/*
+!roseAcademy_Laravel/public/uploads/.gitkeep
+roseAcademy_Laravel/storage/app/*
+!roseAcademy_Laravel/storage/app/.gitignore
+!roseAcademy_Laravel/storage/app/public/.gitignore
+roseAcademy_Laravel/storage/framework/cache/*
+roseAcademy_Laravel/storage/framework/sessions/*
+roseAcademy_Laravel/storage/framework/views/*
+roseAcademy_Laravel/storage/framework/testing/*
+roseAcademy_Laravel/storage/logs/*
+!roseAcademy_Laravel/storage/logs/.gitignore
+
+# --------------------------------------------------
+# IDEs & OS System Files
+# --------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
