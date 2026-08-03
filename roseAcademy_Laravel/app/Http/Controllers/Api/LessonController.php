@@ -130,7 +130,7 @@ class LessonController extends Controller
             // Support optional authentication (works for guests, students, and admins)
             $user = $request->user() ?? auth('sanctum')->user();
 
-            $isAdmin = $user && $user->isAdmin();
+            $isAdmin = $user && $user->isAdminAny();
             $isSubscribed = $user && ($isAdmin || $user->canAccessCourse($courseId));
 
             // التحقق من حالة الكورس (يُستثنى الأدمن)
@@ -147,7 +147,8 @@ class LessonController extends Controller
             if (!$isAdmin && $user && !empty($user->gender)) {
                 $query->where(function($q) use ($user) {
                     $q->where('target_gender', 'both')
-                      ->orWhere('target_gender', $user->gender);
+                      ->orWhere('target_gender', $user->gender)
+                      ->orWhereNull('target_gender');
                 });
             }
 

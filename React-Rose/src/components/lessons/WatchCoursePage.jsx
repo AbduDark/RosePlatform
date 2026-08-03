@@ -73,20 +73,20 @@ const WatchCoursePage = () => {
 
   // Filter lessons based on user gender and target_gender
   const filteredLessons = useMemo(() => {
-    if (!user || !user.gender) {
+    // Admins see all lessons regardless of target_gender
+    if (!user || !user.gender || user.role === "admin" || user.is_admin) {
       return lessons;
     }
 
     return lessons.filter((lesson) => {
       const targetGender = lesson.target_gender;
 
-      // Show lessons with "both" to everyone
-      if (targetGender === "both") {
+      // Show lessons with "both" or missing target_gender to everyone
+      if (!targetGender || targetGender === "both") {
         return true;
       }
 
       // Show lessons that match the user's gender
-      // male lessons for male users, female lessons for female users
       return targetGender === user.gender;
     });
   }, [lessons, user]);
