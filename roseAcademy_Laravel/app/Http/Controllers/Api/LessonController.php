@@ -132,52 +132,51 @@ class LessonController extends Controller
                 return $this->errorResponse('يجب تسجيل الدخول لعرض الدروس', 401);
             }
 
-            // التحقق من حالة الكورس
-// بعد التعديل (سيظهر الرسالة المحددة):
-            if (!$course->is_active) {
+            // التحقق من حالة الكورس (يُستثنى الأدمن)
+            if (!$course->is_active && !$user->isAdmin()) {
                  return $this->errorResponse([
                      'ar' => 'هذه الدورة غير متاحة حالياً',
-                       'en' => 'This course is currently unavailable'
+                     'en' => 'This course is currently unavailable'
                 ], 403);
             }
 
-            // التحقق من توافق الجنس
-            // if ($course->target_gender !== 'both' && $course->target_gender !== $user->gender) {
-            //     return $this->errorResponse('هذه الدورة غير متاحة لجنسك', 403);
-            // }
+            $isSubscribed = $user->isAdmin() || $user->canAccessCourse($courseId);
 
-            // التحقق من الاشتراك النشط
-            $isSubscribed = $user->canAccessCourse($courseId);
-
-            if (!$isSubscribed) {
-                // إرجاع الدروس المجانية فقط للمستخدمين غير المشتركين
+            if ($user->isAdmin()) {
                 $lessons = $course->lessons()
-                    ->where('is_free', true)
-                    ->where(function($query) use ($user) {
-                        $query->where('target_gender', 'both')
-                              ->orWhere('target_gender', $user->gender);
-                    })
-                    ->orderBy('order')
+                    ->orderBy('order', 'asc')
+                    ->orderBy('created_at', 'asc')
                     ->get();
-
-                // إضافة رسالة توضيحية
-                $message = 'تم جلب الدروس المجانية فقط. يجب الاشتراك في الدورة للوصول لجميع الدروس';
-            } else {
-                // إرجاع جميع الدروس للمشتركين والمديرين
-                $lessons = $course->lessons()
-                    ->where(function($query) use ($user) {
-                        $query->where('target_gender', 'both')
-                              ->orWhere('target_gender', $user->gender);
-                    })
-                    ->orderBy('order')
+                $message = 'تم جلب جميع الدروس بنجاح';
+            } elseif ($isSubscribed) {
+                $query = $course->lessons();
+                if (!empty($user->gender)) {
+                    $query->where(function($q) use ($user) {
+                        $q->where('target_gender', 'both')
+                          ->orWhere('target_gender', $user->gender);
+                    });
+                }
+                $lessons = $query->orderBy('order', 'asc')
+                    ->orderBy('created_at', 'asc')
                     ->get();
-
                 $message = 'تم جلب الدروس بنجاح';
+            } else {
+                // الدروس المجانية للمستخدمين غير المشتركين
+                $query = $course->lessons()->where('is_free', true);
+                if (!empty($user->gender)) {
+                    $query->where(function($q) use ($user) {
+                        $q->where('target_gender', 'both')
+                          ->orWhere('target_gender', $user->gender);
+                    });
+                }
+                $lessons = $query->orderBy('order', 'asc')
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+                $message = 'تم جلب الدروس المجانية فقط. يجب الاشتراك في الدورة للوصول لجميع الدروس';
             }
 
             // إضافة معلومات إضافية للدروس
-            $lessons->each(function($lesson) use ($user, $isSubscribed) {
-                // إضافة رابط الفيديو إذا كان المستخدم يستطيع الوصول للدرس
+            $lessons->each(function($lesson) {
                 if ($lesson->can_access && $lesson->has_video) {
                     $lesson->video_url = $lesson->getVideoDirectUrl();
                     $lesson->video_duration_formatted = $lesson->getFormattedDuration();
@@ -187,7 +186,6 @@ class LessonController extends Controller
                 }
             });
 
-            // الحصول على معلومات الاشتراك النشط
             $activeSubscription = $user->getActiveSubscription($courseId);
 
             return $this->successResponse([
@@ -200,8 +198,17 @@ class LessonController extends Controller
                 ] : null
             ], $message);
 
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse([
+                'ar' => 'الكورس المطلوب غير موجود',
+                'en' => 'The requested course does not exist'
+            ], 404);
         } catch (\Exception $e) {
-            Log::error('Get lessons error: ' . $e->getMessage());
+            Log::error('Get lessons error: ' . $e->getMessage(), [
+                'course_id' => $courseId,
+                'user_id' => $user?->id ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->serverErrorResponse();
         }
     }
@@ -233,6 +240,8 @@ class LessonController extends Controller
                 $request->all(),
                 ['is_video_protected' => $request->get('is_video_protected', true)]
             ));
+
+            $this->clearCoursesAndLessonsCache();
 
             return $this->successResponse(
                 $lesson->load('course'),
@@ -272,6 +281,8 @@ class LessonController extends Controller
 
             $lesson->update($request->all());
 
+            $this->clearCoursesAndLessonsCache();
+
             return $this->successResponse(
                 $lesson->load('course'),
                 'تم تحديث الدرس بنجاح'
@@ -301,11 +312,35 @@ class LessonController extends Controller
 
             $lesson->delete();
 
+            $this->clearCoursesAndLessonsCache();
+
             return $this->successResponse([], 'تم حذف الدرس بنجاح');
 
         } catch (\Exception $e) {
             Log::error('Delete lesson error: ' . $e->getMessage());
             return $this->serverErrorResponse();
+        }
+    }
+
+    private function clearCoursesAndLessonsCache(): void
+    {
+        try {
+            if (in_array(config('cache.default'), ['redis', 'memcached'])) {
+                \Illuminate\Support\Facades\Cache::tags(['courses'])->flush();
+            } else {
+                \Illuminate\Support\Facades\Cache::flush();
+            }
+        } catch (\Throwable $e) {
+            try {
+                \Illuminate\Support\Facades\Cache::flush();
+            } catch (\Throwable $ex) {
+                // Ignore fallback
+            }
+        }
+        try {
+            \Illuminate\Support\Facades\Cache::forget('admin_dashboard_stats');
+        } catch (\Throwable $e) {
+            // Ignore
         }
     }
 

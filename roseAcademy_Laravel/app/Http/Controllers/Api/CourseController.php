@@ -28,37 +28,19 @@ class CourseController extends BaseController
         try {
             $cacheKey = 'courses_' . md5(serialize($request->all()));
 
-            $courses = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($request) {
-                $query = Course::where('is_active', true);
-                    // ->with(['ratings'])
-                    // ->withCount('lessons');
-
-                // Search
-                if ($request->has('search')) {
-                    $query->where(function($q) use ($request) {
-                        $q->where('title', 'like', "%{$request->search}%")
-                          ->orWhere('description', 'like', "%{$request->search}%")
-                          ->orWhere('instructor_name', 'like', "%{$request->search}%");
+            try {
+                if (in_array(config('cache.default'), ['redis', 'memcached'])) {
+                    $courses = Cache::tags(['courses'])->remember($cacheKey, now()->addMinutes(30), function () use ($request) {
+                        return $this->buildCoursesQuery($request);
+                    });
+                } else {
+                    $courses = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($request) {
+                        return $this->buildCoursesQuery($request);
                     });
                 }
-
-                // Filters
-                $query->when($request->level, fn($q, $level) => $q->where('level', $level))
-                     ->when($request->language, fn($q, $lang) => $q->where('language', $lang))
-                     ->when($request->grade, fn($q, $grade) => $q->where('grade', $grade))
-                     ->when($request->min_price, fn($q, $min) => $q->where('price', '>=', $min))
-                     ->when($request->max_price, fn($q, $max) => $q->where('price', '<=', $max));
-
-                // Sorting
-                $sortBy = in_array($request->sort_by, ['title', 'price', 'created_at', 'duration_hours'])
-                    ? $request->sort_by
-                    : 'created_at';
-
-                $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
-
-                return $query->orderBy($sortBy, $sortOrder)
-                           ->paginate($request->per_page ?? 10);
-            });
+            } catch (\Throwable $e) {
+                $courses = $this->buildCoursesQuery($request);
+            }
 
             return CourseResource::collection($courses)->additional([
                 'message' => [
@@ -73,6 +55,54 @@ class CourseController extends BaseController
                 'request' => $request->all()
             ]);
             return $this->serverErrorResponse();
+        }
+    }
+
+    private function buildCoursesQuery(Request $request)
+    {
+        $query = Course::where('is_active', true);
+
+        // Search
+        if ($request->has('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', "%{$request->search}%")
+                  ->orWhere('description', 'like', "%{$request->search}%")
+                  ->orWhere('instructor_name', 'like', "%{$request->search}%");
+            });
+        }
+
+        // Filters
+        $query->when($request->level, fn($q, $level) => $q->where('level', $level))
+             ->when($request->language, fn($q, $lang) => $q->where('language', $lang))
+             ->when($request->grade, fn($q, $grade) => $q->where('grade', $grade))
+             ->when($request->min_price, fn($q, $min) => $q->where('price', '>=', $min))
+             ->when($request->max_price, fn($q, $max) => $q->where('price', '<=', $max));
+
+        // Sorting
+        $sortBy = in_array($request->sort_by, ['title', 'price', 'created_at', 'duration_hours'])
+            ? $request->sort_by
+            : 'created_at';
+
+        $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderBy($sortBy, $sortOrder)
+                   ->paginate($request->per_page ?? 10);
+    }
+
+    private function clearCoursesCache(): void
+    {
+        try {
+            if (in_array(config('cache.default'), ['redis', 'memcached'])) {
+                Cache::tags(['courses'])->flush();
+            } else {
+                Cache::flush();
+            }
+        } catch (\Throwable $e) {
+            try {
+                Cache::flush();
+            } catch (\Throwable $ex) {
+                // Ignore fallback
+            }
         }
     }
 
@@ -214,7 +244,7 @@ class CourseController extends BaseController
         }
 
         $course = Course::create($data);
-        Cache::forget('courses_' . md5(''));
+        $this->clearCoursesCache();
         Cache::forget('admin_dashboard_stats');
         $course->image_url = $course->image 
             ? url($course->image) 
@@ -293,6 +323,9 @@ class CourseController extends BaseController
 
         // ✍️ حدّث الكورس بالبيانات
         $course->update($data);
+        $this->clearCoursesCache();
+        Cache::forget('course_' . $id);
+        Cache::forget('admin_dashboard_stats');
 
         // 📌 جهّز الريسبونس مع لينك الصورة
         $courseFresh = $course->fresh();
@@ -365,8 +398,8 @@ class CourseController extends BaseController
             }
 
             $course->delete();
-            Cache::forget('courses_' . md5(''));  // مسح كاش القائمة
-            Cache::forget('course_' . $id);       // مسح كاش الكورس المحذوف
+            $this->clearCoursesCache();
+            Cache::forget('course_' . $id);
             Cache::forget('admin_dashboard_stats');
 
             return $this->successResponse(

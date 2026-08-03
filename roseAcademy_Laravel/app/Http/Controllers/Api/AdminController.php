@@ -387,9 +387,13 @@ class AdminController extends Controller
     public function getPendingComments(Request $request)
     {
         try {
-            $comments = Comment::where('is_approved', false)
-                ->with(['user', 'lesson.course'])
-                ->orderBy('created_at', 'asc')
+            $query = Comment::with(['user:id,name,email', 'lesson:id,title', 'course:id,title']);
+
+            if (\Schema::hasColumn('comments', 'is_approved')) {
+                $query->where('is_approved', false);
+            }
+
+            $comments = $query->orderBy('created_at', 'desc')
                 ->paginate($request->get('per_page', 15));
 
             return $this->successResponse($comments, [
@@ -399,6 +403,30 @@ class AdminController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Admin get pending comments error: ' . $e->getMessage());
+            return $this->serverErrorResponse();
+        }
+    }
+
+    public function approveComment($id)
+    {
+        try {
+            $comment = Comment::findOrFail($id);
+            if (\Schema::hasColumn('comments', 'is_approved')) {
+                $comment->update(['is_approved' => true]);
+            }
+
+            return $this->successResponse($comment, [
+                'ar' => 'تمت الموافقة على التعليق بنجاح',
+                'en' => 'Comment approved successfully'
+            ]);
+
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse([
+                'ar' => 'التعليق المطلوب غير موجود',
+                'en' => 'The requested comment does not exist'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Admin approve comment error: ' . $e->getMessage());
             return $this->serverErrorResponse();
         }
     }

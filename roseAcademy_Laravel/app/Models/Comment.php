@@ -20,6 +20,7 @@ class Comment extends Model
         'lesson_id',
         'course_id',
         'content',
+        'is_approved',
     ];
 
     public function user()

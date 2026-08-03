@@ -28,7 +28,16 @@ const CommentsManager = () => {
       }
 
       const data = await response.json();
-      setPendingComments(data.data || data.comments || data || []);
+      const rawPayload = data?.data;
+      const list = Array.isArray(rawPayload?.data)
+        ? rawPayload.data
+        : (Array.isArray(rawPayload)
+          ? rawPayload
+          : (Array.isArray(data?.comments)
+            ? data.comments
+            : (Array.isArray(data) ? data : [])));
+
+      setPendingComments(list);
     } catch (err) {
       console.error("Error fetching comments:", err);
       setError(err.message || "حدث خطأ أثناء تحميل التعليقات");

@@ -149,8 +149,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Comments
     Route::prefix('comments')->group(function () {
-        Route::get('pending',                 [CommentController::class, 'getPendingComments']);
-        Route::post('{id}/approve',           [CommentController::class, 'approveComment']);
+        Route::get('pending',                 [AdminController::class, 'getPendingComments']);
+        Route::match(['post', 'put'], '{id}/approve', [AdminController::class, 'approveComment']);
     });
 
     // Notifications
