@@ -305,33 +305,22 @@ public function upload(Request $request, $lessonId)
                 return $this->errorResponse('لا يمكن قراءة ملف الفيديو', 500);
             }
 
-            // ─── Step 4: Range streaming ────────────────────────────────────────
-            $fileSize = filesize($videoPath);
-            $start    = 0;
-            $end      = $fileSize - 1;
-            $partial  = false;
+            // ─── Step 4: Ensure exact video MIME type & Cross-Origin streaming ──────
+            $ext = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'mp4'  => 'video/mp4',
+                'webm' => 'video/webm',
+                'mov'  => 'video/quicktime',
+                'avi'  => 'video/x-msvideo',
+                'mkv'  => 'video/x-matroska',
+                'm4v'  => 'video/mp4',
+                'ogv'  => 'video/ogg',
+            ];
+            $mimeType = $mimeTypes[$ext] ?? 'video/mp4';
 
-            if ($request->hasHeader('Range')) {
-                $range   = $request->header('Range');
-                $matches = [];
-                if (preg_match('/bytes=(\d+)-(\d*)/', $range, $matches)) {
-                    $start   = intval($matches[1]);
-                    if (!empty($matches[2])) {
-                        $end = min(intval($matches[2]), $fileSize - 1);
-                    }
-                    $partial = true;
-                }
-            }
-
-            $length   = $end - $start + 1;
-            $mimeType = mime_content_type($videoPath) ?: 'video/mp4';
-
-            // ─── Step 5: Anti-download & Cross-Origin streaming headers ──────────────────
             $origin = $request->header('Origin') ?: 'https://rose-academy.com';
             $headers = [
                 'Content-Type'                => $mimeType,
-                'Content-Length'              => $length,
-                'Accept-Ranges'               => 'bytes',
                 'Content-Disposition'         => 'inline',
                 'Access-Control-Allow-Origin' => $origin,
                 'Access-Control-Allow-Methods'=> 'GET, HEAD, OPTIONS',
@@ -341,54 +330,19 @@ public function upload(Request $request, $lessonId)
                 'Cache-Control'               => 'no-cache, no-store, must-revalidate, private, max-age=0',
                 'Pragma'                      => 'no-cache',
                 'Expires'                     => '0',
-                'X-Content-Type-Options'      => 'nosniff',
                 'X-Robots-Tag'               => 'noindex, nofollow, nosnippet, noarchive',
                 'Referrer-Policy'             => 'strict-origin-when-cross-origin',
                 'X-Download-Options'          => 'noopen',
             ];
 
-            if ($partial) {
-                $headers['Content-Range'] = "bytes {$start}-{$end}/{$fileSize}";
-            }
+            Log::info('STREAM_VIDEO_SUCCESS_DELIVERY', [
+                'lesson_id'  => $lesson->id,
+                'video_path' => $videoPath,
+                'mime_type'  => $mimeType,
+                'file_size'  => filesize($videoPath),
+            ]);
 
-            $statusCode = $partial ? 206 : 200;
-
-            return response()->stream(function () use ($videoPath, $start, $end) {
-                if (function_exists('set_time_limit')) {
-                    @set_time_limit(0);
-                }
-                if (function_exists('ignore_user_abort')) {
-                    @ignore_user_abort(true);
-                }
-
-                $stream = fopen($videoPath, 'rb');
-                if (!$stream) {
-                    return;
-                }
-
-                fseek($stream, $start);
-                $bytesRemaining = $end - $start + 1;
-                $chunkSize = 65536; // 64KB chunks for optimal streaming and buffering
-
-                while ($bytesRemaining > 0 && !feof($stream)) {
-                    $bytesToRead = min($chunkSize, $bytesRemaining);
-                    $chunk = fread($stream, $bytesToRead);
-                    
-                    if ($chunk === false) {
-                        break;
-                    }
-
-                    echo $chunk;
-                    $bytesRemaining -= strlen($chunk);
-                    
-                    if (ob_get_level()) {
-                        ob_flush();
-                    }
-                    flush();
-                }
-                
-                fclose($stream);
-            }, $statusCode, $headers);
+            return response()->file($videoPath, $headers);
 
         } catch (\Exception $e) {
             Log::error('Stream video error: ' . $e->getMessage(), [
