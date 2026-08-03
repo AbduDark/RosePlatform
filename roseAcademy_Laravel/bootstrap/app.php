@@ -3,7 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Middleware\HandleCors;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,8 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Register CORS middleware globally so all API responses include CORS headers
-        $middleware->prepend(HandleCors::class);
+        // CORS is handled entirely by Nginx — no Laravel CORS middleware needed
 
         // Trust Cloudflare & reverse proxy headers
         $middleware->trustProxies(at: '*');

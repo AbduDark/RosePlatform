@@ -19,7 +19,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*', 'uploads/*'],
+    'paths' => [],
 
     // الطرق المسموحة (GET, POST, PUT, DELETE ...)
     'allowed_methods' => ['*'],
