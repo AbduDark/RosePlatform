@@ -19,7 +19,7 @@ return [
     |
     */
 
-    'paths' => [],
+    'paths' => ['api/*'],
 
     // الطرق المسموحة (GET, POST, PUT, DELETE ...)
     'allowed_methods' => ['*'],
@@ -46,7 +46,7 @@ return [
 
     // الهيدرز اللي ممكن تظهر للـ Frontend (زوّد هنا أي هيدر مخصص محتاج
     // تقراه من الـ JS، مثلاً Content-Disposition لو بتنزّل ملفات)
-    'exposed_headers' => [],
+    'exposed_headers' => ['Content-Range', 'Content-Length', 'Accept-Ranges', 'Content-Type'],
 
     // المدة اللي المتصفح ممكن يكاش فيها preflight request (OPTIONS) - 24 ساعة
     'max_age' => 86400,

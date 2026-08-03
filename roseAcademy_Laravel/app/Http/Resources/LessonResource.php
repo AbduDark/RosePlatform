@@ -16,6 +16,9 @@ class LessonResource extends JsonResource
 
         $videoStatus = $this->video_status ?? ($this->has_video ? 'ready' : null);
 
+        $videoUrl = null;
+        $embedUrl = null;
+
         if ($canAccess && $this->has_video) {
             if ($this->video_source === 'youtube') {
                 $embedUrl = $this->getSecureYouTubeEmbedUrl();

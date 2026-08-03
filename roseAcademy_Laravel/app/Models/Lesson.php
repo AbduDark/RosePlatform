@@ -30,6 +30,10 @@ class Lesson extends Model
         'video_status',
         'video_duration',
         'video_size',
+        'video_metadata',
+        'is_video_protected',
+        'video_token',
+        'video_token_expires_at',
     ];
 
     protected $appends = ['can_access', 'has_video'];
@@ -38,8 +42,11 @@ class Lesson extends Model
     {
         return [
             'is_free' => 'boolean',
+            'is_video_protected' => 'boolean',
             'video_duration' => 'integer',
             'video_size' => 'integer',
+            'video_metadata' => 'array',
+            'video_token_expires_at' => 'datetime',
         ];
     }
 
