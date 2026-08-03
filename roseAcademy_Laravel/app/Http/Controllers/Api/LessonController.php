@@ -126,58 +126,40 @@ class LessonController extends Controller
     {
         try {
             $course = Course::findOrFail($courseId);
-            $user = $request->user();
+            // Support optional authentication (works for guests, students, and admins)
+            $user = $request->user() ?? auth('sanctum')->user();
 
-            if (!$user) {
-                return $this->errorResponse('يجب تسجيل الدخول لعرض الدروس', 401);
-            }
+            $isAdmin = $user && $user->isAdmin();
+            $isSubscribed = $user && ($isAdmin || $user->canAccessCourse($courseId));
 
             // التحقق من حالة الكورس (يُستثنى الأدمن)
-            if (!$course->is_active && !$user->isAdmin()) {
-                 return $this->errorResponse([
-                     'ar' => 'هذه الدورة غير متاحة حالياً',
-                     'en' => 'This course is currently unavailable'
+            if (!$course->is_active && !$isAdmin) {
+                return $this->errorResponse([
+                    'ar' => 'هذه الدورة غير متاحة حالياً',
+                    'en' => 'This course is currently unavailable'
                 ], 403);
             }
 
-            $isSubscribed = $user->isAdmin() || $user->canAccessCourse($courseId);
+            $query = $course->lessons();
 
-            if ($user->isAdmin()) {
-                $lessons = $course->lessons()
-                    ->orderBy('order', 'asc')
-                    ->orderBy('created_at', 'asc')
-                    ->get();
-                $message = 'تم جلب جميع الدروس بنجاح';
-            } elseif ($isSubscribed) {
-                $query = $course->lessons();
-                if (!empty($user->gender)) {
-                    $query->where(function($q) use ($user) {
-                        $q->where('target_gender', 'both')
-                          ->orWhere('target_gender', $user->gender);
-                    });
-                }
-                $lessons = $query->orderBy('order', 'asc')
-                    ->orderBy('created_at', 'asc')
-                    ->get();
-                $message = 'تم جلب الدروس بنجاح';
-            } else {
-                // الدروس المجانية للمستخدمين غير المشتركين
-                $query = $course->lessons()->where('is_free', true);
-                if (!empty($user->gender)) {
-                    $query->where(function($q) use ($user) {
-                        $q->where('target_gender', 'both')
-                          ->orWhere('target_gender', $user->gender);
-                    });
-                }
-                $lessons = $query->orderBy('order', 'asc')
-                    ->orderBy('created_at', 'asc')
-                    ->get();
-                $message = 'تم جلب الدروس المجانية فقط. يجب الاشتراك في الدورة للوصول لجميع الدروس';
+            // الفلترة بحسب الجنس للطلاب غير الأدمن إذا كان جنس الطالب محدداً
+            if (!$isAdmin && $user && !empty($user->gender)) {
+                $query->where(function($q) use ($user) {
+                    $q->where('target_gender', 'both')
+                      ->orWhere('target_gender', $user->gender);
+                });
             }
 
-            // إضافة معلومات إضافية للدروس
-            $lessons->each(function($lesson) {
-                if ($lesson->can_access && $lesson->has_video) {
+            $lessons = $query->orderBy('order', 'asc')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // تحديد إمكانية الوصول ورابط الفيديو لكل درس
+            $lessons->each(function($lesson) use ($user, $isAdmin, $isSubscribed) {
+                $canAccess = $isAdmin || $lesson->is_free || $isSubscribed;
+                $lesson->can_access = $canAccess;
+
+                if ($canAccess && $lesson->has_video) {
                     $lesson->video_url = $lesson->getVideoDirectUrl();
                     $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                     $lesson->video_size_formatted = $lesson->getFormattedSize();
@@ -186,7 +168,7 @@ class LessonController extends Controller
                 }
             });
 
-            $activeSubscription = $user->getActiveSubscription($courseId);
+            $activeSubscription = ($user && !$isAdmin) ? $user->getActiveSubscription($courseId) : null;
 
             return $this->successResponse([
                 'course' => $course,
@@ -196,7 +178,7 @@ class LessonController extends Controller
                     'expires_at' => $activeSubscription->expires_at,
                     'days_remaining' => $activeSubscription->getDaysRemaining()
                 ] : null
-            ], $message);
+            ], 'تم جلب الدروس بنجاح');
 
         } catch (ModelNotFoundException $e) {
             return $this->errorResponse([
@@ -206,7 +188,6 @@ class LessonController extends Controller
         } catch (\Exception $e) {
             Log::error('Get lessons error: ' . $e->getMessage(), [
                 'course_id' => $courseId,
-                'user_id' => $user?->id ?? 'unknown',
                 'trace' => $e->getTraceAsString()
             ]);
             return $this->serverErrorResponse();
