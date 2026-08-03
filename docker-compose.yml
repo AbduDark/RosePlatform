@@ -65,6 +65,7 @@ services:
       - "443:443"
     volumes:
       - ./roseAcademy_Laravel:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       api:
         condition: service_healthy
