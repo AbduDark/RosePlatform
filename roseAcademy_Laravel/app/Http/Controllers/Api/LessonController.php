@@ -190,8 +190,8 @@ class LessonController extends Controller
 
             return $this->successResponse([
                 'course' => $course,
-                'lessons' => $lessons,
-                'user_subscribed' => $isSubscribed,
+                'lessons' => $lessons->values(),
+                'user_subscribed' => (bool) $isSubscribed,
                 'subscription_info' => $activeSubscription ? [
                     'expires_at' => $activeSubscription->expires_at,
                     'days_remaining' => $activeSubscription->getDaysRemaining()

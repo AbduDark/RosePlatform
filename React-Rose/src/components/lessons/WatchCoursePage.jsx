@@ -59,27 +59,15 @@ const WatchCoursePage = () => {
     setError(null);
 
     try {
-      // 1. Fetch lessons & course state from lessons endpoint
-      const response = await getLessonsByCourse(courseId, token);
+      // 1. Fetch normalized lessons & course state from lessons API
+      const normalizedData = await getLessonsByCourse(courseId, token);
       
-      // Unwraps data safely whether response is direct, wrapped in .data, or double wrapped (.data.data)
-      let rawData = response;
-      if (rawData?.data?.lessons) {
-        rawData = rawData.data;
-      } else if (rawData?.data?.data?.lessons) {
-        rawData = rawData.data.data;
-      } else if (rawData?.data && typeof rawData.data === "object") {
-        rawData = rawData.data;
-      }
+      console.log("WatchCoursePage received normalizedData:", normalizedData);
 
-      console.log("Extracted payload rawData:", rawData);
-      console.log("Lessons array:", rawData?.lessons);
-      console.log("User info:", { gender: user?.gender, isAdmin });
-      
-      const fetchedLessons = rawData?.lessons || [];
-      const fetchedCourse = rawData?.course || null;
-      const isSubscribed = Boolean(rawData?.user_subscribed || isAdmin);
-      const subInfo = rawData?.subscription_info || null;
+      const fetchedLessons = normalizedData.lessons || [];
+      const fetchedCourse = normalizedData.course || null;
+      const isSubscribed = Boolean(normalizedData.user_subscribed || isAdmin);
+      const subInfo = normalizedData.subscription_info || null;
 
       setLessons(fetchedLessons);
       setUserSubscribed(isSubscribed);
@@ -99,7 +87,7 @@ const WatchCoursePage = () => {
 
       // Check if no lessons exist for this course
       if (fetchedLessons.length === 0) {
-        console.warn("No lessons found for course", courseId, "Full response:", response);
+        console.warn("No lessons found for course", courseId, "Normalized:", normalizedData);
         setError(t("lessons.sidebar.noEpisodes", "لا توجد حلقات متاحة لهذه الدورة"));
         setIsLoading(false);
         return;

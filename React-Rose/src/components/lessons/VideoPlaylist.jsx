@@ -44,7 +44,7 @@ const VideoPlaylist = ({
 
       try {
         const response = await getLessonsByCourse(courseId, token);
-        const lessonsData = response?.data?.lessons || [];
+        const lessonsData = response?.lessons || response?.data?.lessons || [];
 
         const videoLessons = lessonsData.filter((lesson) => lesson.has_video);
         setLessons(videoLessons);

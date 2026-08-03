@@ -8,9 +8,12 @@ const fetchJson = async (url, options = {}) => {
   
   let data;
   try {
-    data = contentType.includes("application/json") 
-      ? await response.json() 
-      : await response.text();
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
   } catch (parseError) {
     throw new Error(`Failed to parse response: ${parseError.message}`);
   }
@@ -330,12 +333,65 @@ export const getVideoInfo = async (lessonId, token) => {
   }
 };
 
+// Helper function to extract and normalize lessons data from any API response structure
+export const extractLessonsData = (res) => {
+  let obj = res;
+
+  // 1. If stringified JSON, parse it
+  if (typeof obj === "string") {
+    try {
+      obj = JSON.parse(obj);
+    } catch {
+      // Keep as is
+    }
+  }
+
+  // 2. Safely traverse down up to 5 levels to find object containing 'lessons'
+  for (let i = 0; i < 5; i++) {
+    if (!obj || typeof obj !== "object") break;
+
+    if (Array.isArray(obj.lessons)) {
+      break; // Found the target layer with lessons array!
+    }
+
+    if (obj.data !== undefined && obj.data !== null) {
+      let child = obj.data;
+      if (typeof child === "string") {
+        try {
+          child = JSON.parse(child);
+        } catch {
+          // ignore
+        }
+      }
+      if (typeof child === "object" && child !== null) {
+        obj = child;
+        continue;
+      }
+    }
+
+    break;
+  }
+
+  const lessons = Array.isArray(obj?.lessons) ? obj.lessons : [];
+  const course = obj?.course || null;
+  const user_subscribed = Boolean(obj?.user_subscribed);
+  const subscription_info = obj?.subscription_info || null;
+
+  return {
+    lessons,
+    course,
+    user_subscribed,
+    subscription_info,
+    raw: res,
+  };
+};
+
 // Student Lesson APIs
 
 export const getLessonsByCourse = async (courseId, token) => {
   try {
     if (!courseId) throw new Error("courseId is required");
-    
+
     const headers = {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -344,10 +400,15 @@ export const getLessonsByCourse = async (courseId, token) => {
 
     console.log("Fetching lessons for course:", courseId);
 
-    return await fetchJson(`${API_BASE}/courses/${courseId}/lessons`, {
+    const rawResponse = await fetchJson(`${API_BASE}/courses/${courseId}/lessons`, {
       method: "GET",
       headers,
     });
+
+    const normalized = extractLessonsData(rawResponse);
+    console.log("Normalized lessons response:", normalized);
+
+    return normalized;
   } catch (error) {
     console.error("Error fetching course lessons:", error);
     throw error;

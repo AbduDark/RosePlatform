@@ -30,7 +30,7 @@ function OverviewCourse() {
             const statusRes = await getSubscriptionStatus(token, courseId);
             setSubscriptionStatus(statusRes.data);
             const lessons = await getLessonsByCourse(courseId, token);
-            setLesson(lessons?.data?.lessons);
+            setLesson(lessons?.lessons || lessons?.data?.lessons || []);
           } catch {
             setSubscriptionStatus(null);
           }
