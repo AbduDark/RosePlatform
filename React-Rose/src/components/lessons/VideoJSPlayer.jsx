@@ -74,7 +74,28 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd, qualitySou
       const videoElement = videoRef.current;
       retryCountRef.current = 0;
 
-      console.log("Initializing VideoJS player for lesson:", lessonId);
+      console.log("🎬 VideoJS Attempting Load:", {
+        lessonId,
+        videoUrl,
+      });
+
+      // Diagnostic check: test stream URL headers & status directly in browser
+      if (videoUrl) {
+        fetch(videoUrl, { method: "HEAD" })
+          .then((res) => {
+            console.log("🎥 Video Stream URL Diagnostic Check:", {
+              status: res.status,
+              statusText: res.statusText,
+              contentType: res.headers.get("content-type"),
+              contentLength: res.headers.get("content-length"),
+              acceptRanges: res.headers.get("accept-ranges"),
+              url: videoUrl,
+            });
+          })
+          .catch((err) => {
+            console.error("❌ Video Stream URL Fetch Check Failed:", err, videoUrl);
+          });
+      }
 
       try {
         const player = videojs(videoElement, {

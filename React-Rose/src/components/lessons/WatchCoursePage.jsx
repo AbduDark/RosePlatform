@@ -388,13 +388,25 @@ const WatchCoursePage = () => {
                     </p>
                   </div>
                 ) : (
-                  <VideoJSPlayer
-                    key={currentLesson.id}
-                    videoUrl={currentLesson.video_url}
-                    lessonId={currentLesson.id}
-                    lessonTitle={currentLesson.title}
-                    onVideoEnd={handleNextLesson}
-                  />
+                  (() => {
+                    console.log("📺 WatchCoursePage Rendering Player:", {
+                      lessonId: currentLesson.id,
+                      lessonTitle: currentLesson.title,
+                      videoUrl: currentLesson.video_url,
+                      videoStatus: currentLesson.video_status,
+                      hasVideo: currentLesson.has_video,
+                      canAccess: canAccessCurrentLesson,
+                    });
+                    return (
+                      <VideoJSPlayer
+                        key={currentLesson.id}
+                        videoUrl={currentLesson.video_url}
+                        lessonId={currentLesson.id}
+                        lessonTitle={currentLesson.title}
+                        onVideoEnd={handleNextLesson}
+                      />
+                    );
+                  })()
                 )
               ) : (
                 /* Subscription Required Notice Overlay */

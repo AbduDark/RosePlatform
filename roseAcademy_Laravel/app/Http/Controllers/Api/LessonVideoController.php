@@ -180,9 +180,24 @@ public function upload(Request $request, $lessonId)
     public function streamVideo(Request $request, Lesson $lesson)
     {
         try {
-            // Log the incoming request for debugging
+            Log::info('STREAM_VIDEO_REQUEST', [
+                'lesson_id' => $lesson->id,
+                'is_free' => $lesson->is_free,
+                'has_video' => $lesson->hasVideo(),
+                'video_path' => $lesson->video_path,
+                'video_status' => $lesson->video_status,
+                'full_url' => $request->fullUrl(),
+                'has_valid_signature' => $request->hasValidSignature(),
+                'has_token_param' => $request->has('_t'),
+            ]);
+
             // ─── Step 1: Validate signed URL (mandatory for everyone) ────────────
             if (!$request->hasValidSignature()) {
+                Log::warning('STREAM_VIDEO_INVALID_SIGNATURE', [
+                    'lesson_id' => $lesson->id,
+                    'full_url' => $request->fullUrl(),
+                    'app_url' => config('app.url'),
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'رابط البث غير صالح أو انتهت صلاحيته. يرجى إعادة تحميل الصفحة.',
@@ -676,29 +691,23 @@ public function upload(Request $request, $lessonId)
      */
     private function canAccessLesson(User $user, Lesson $lesson): bool
     {
-        // Admin يمكنه الوصول لكل شيء
-        if ($user->isAdmin()) {
+        // Admin can access everything
+        if ($user->isAdminAny()) {
             return true;
         }
 
-        // التحقق من توافق الجنس
-        if ($lesson->target_gender !== 'both' && $lesson->target_gender !== $user->gender) {
+        // Gender check (only if user gender is set and target_gender is not 'both')
+        if ($user->gender && $lesson->target_gender && $lesson->target_gender !== 'both' && $lesson->target_gender !== $user->gender) {
             return false;
         }
 
-        // التحقق من الدروس المجانية
+        // Free lessons accessible to all
         if ($lesson->is_free) {
             return true;
         }
 
-        // التحقق من الاشتراك
-        $hasActiveSubscription = $user->subscriptions()
-            ->where('course_id', $lesson->course_id)
-            ->where('is_active', true)
-            ->where('is_approved', true)
-            ->exists();
-
-        return $hasActiveSubscription;
+        // Course subscription check
+        return $user->canAccessCourse($lesson->course_id);
     }
 
     /**
