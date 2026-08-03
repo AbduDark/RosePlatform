@@ -192,7 +192,7 @@ public function upload(Request $request, $lessonId)
             ]);
 
             // ─── Step 1: Validate signed URL (mandatory for everyone) ────────────
-            if (!$request->hasValidSignature()) {
+            if (!$request->hasValidSignature(false)) {
                 Log::warning('STREAM_VIDEO_INVALID_SIGNATURE', [
                     'lesson_id' => $lesson->id,
                     'full_url' => $request->fullUrl(),
@@ -797,85 +797,47 @@ public function upload(Request $request, $lessonId)
             'Access-Control-Allow-Headers'  => 'Range, Authorization, Content-Type, Origin, Accept',
             'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges, Content-Type',
             'Access-Control-Allow-Credentials' => 'true',
-            // Allow browser to cache the video bytes for buffering/seeking
-            'Cache-Control'                 => 'private, max-age=3600',
-            'X-Robots-Tag'                  => 'noindex, nofollow, nosnippet, noarchive',
-            'Referrer-Policy'               => 'strict-origin-when-cross-origin',
-            'X-Download-Options'            => 'noopen',
+    /**
+     * Stream a video file with proper HTTP Range (byte-range) support.
+     *
+     * Uses Symfony BinaryFileResponse (via response()->file) which natively handles:
+     * - 206 Partial Content byte ranges required by HTML5 <video> elements
+     * - Content-Type, Content-Length, Accept-Ranges
+     * - Disabling FastCGI buffering (X-Accel-Buffering: no)
+     * - Avoiding duplicate CORS headers (which causes MediaError code 4 in Chrome)
+     */
+    private function streamVideoFile(Request $request, string $videoPath, Lesson $lesson)
+    {
+        $fileSize = filesize($videoPath);
+        $ext = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
+
+        $mimeTypes = [
+            'mp4'  => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov'  => 'video/quicktime',
+            'avi'  => 'video/x-msvideo',
+            'mkv'  => 'video/x-matroska',
+            'm4v'  => 'video/mp4',
+            'ogv'  => 'video/ogg',
         ];
+        $mimeType = $mimeTypes[$ext] ?? 'video/mp4';
 
-        // ─── Range request handling ─────────────────────────────────────────
-        $rangeHeader = $request->header('Range');
-
-        if ($rangeHeader) {
-            // Parse "bytes=START-END"
-            if (!preg_match('/bytes=(\d+)-(\d*)/', $rangeHeader, $matches)) {
-                return response('', 416, array_merge($baseHeaders, [
-                    'Content-Range' => "bytes */{$fileSize}",
-                ]));
-            }
-
-            $start = (int) $matches[1];
-            $end   = !empty($matches[2]) ? (int) $matches[2] : $fileSize - 1;
-
-            // Clamp end to file boundary
-            if ($end >= $fileSize) {
-                $end = $fileSize - 1;
-            }
-
-            // Validate range
-            if ($start > $end || $start >= $fileSize) {
-                return response('', 416, array_merge($baseHeaders, [
-                    'Content-Range' => "bytes */{$fileSize}",
-                ]));
-            }
-
-            $length = $end - $start + 1;
-
-            Log::info('STREAM_VIDEO_RANGE', [
-                'lesson_id'  => $lesson->id,
-                'range'      => "{$start}-{$end}/{$fileSize}",
-                'length'     => $length,
-            ]);
-
-            return response()->stream(function () use ($videoPath, $start, $length) {
-                $handle = fopen($videoPath, 'rb');
-                fseek($handle, $start);
-
-                $remaining = $length;
-                $chunkSize = 8192; // 8 KB chunks
-
-                while ($remaining > 0 && !feof($handle)) {
-                    $read = min($chunkSize, $remaining);
-                    echo fread($handle, $read);
-                    $remaining -= $read;
-                    flush();
-                }
-
-                fclose($handle);
-            }, 206, array_merge($baseHeaders, [
-                'Content-Length' => $length,
-                'Content-Range'  => "bytes {$start}-{$end}/{$fileSize}",
-            ]));
-        }
-
-        // ─── Full file response (no Range header) ───────────────────────────
-        Log::info('STREAM_VIDEO_FULL', [
+        Log::info('STREAM_VIDEO_DELIVERY', [
             'lesson_id'  => $lesson->id,
             'video_path' => $videoPath,
             'mime_type'  => $mimeType,
             'file_size'  => $fileSize,
+            'range'      => $request->header('Range'),
         ]);
 
-        return response()->stream(function () use ($videoPath) {
-            $handle = fopen($videoPath, 'rb');
-            while (!feof($handle)) {
-                echo fread($handle, 8192);
-                flush();
-            }
-            fclose($handle);
-        }, 200, array_merge($baseHeaders, [
-            'Content-Length' => $fileSize,
-        ]));
+        $headers = [
+            'Content-Type'        => $mimeType,
+            'Content-Disposition' => 'inline',
+            'Accept-Ranges'       => 'bytes',
+            'Cache-Control'       => 'private, max-age=3600',
+            'X-Accel-Buffering'   => 'no',
+        ];
+
+        return response()->file($videoPath, $headers);
     }
 }
