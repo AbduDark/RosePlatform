@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaShieldAlt, FaYoutube } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import VideoProtection from "../common/VideoProtection";
 
@@ -50,15 +49,6 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
   return (
     <VideoProtection lessonId={lessonId} userId={user?.id}>
       <div className="relative w-full bg-black rounded-xl overflow-hidden shadow-2xl group select-none">
-        {/* Protected Badge */}
-        <div className="absolute top-4 right-4 z-30 flex items-center space-x-2 pointer-events-none">
-          <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-red-600/90 text-white shadow-lg backdrop-blur-sm">
-            <FaYoutube className="w-4 h-4" />
-            <FaShieldAlt className="w-3 h-3 ml-1" />
-            <span>{t("lessons.videoPlayer.protected", "بث مشفر محمي")}</span>
-          </div>
-        </div>
-
         {/* Video Wrapper */}
         <div className="relative" style={{ paddingTop: "56.25%" }}>
           {!iframeLoaded && (
@@ -77,17 +67,30 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
             onContextMenu={(e) => e.preventDefault()}
           />
 
-          {/* Top Bar Masking Overlay to block YouTube Title, Channel, & Share link clicks */}
+          {/* Top Bar Masking Header: Completely hides YouTube Channel Name, Avatar, Title, and Copy/Share button */}
           <div 
-            className="absolute top-0 left-0 right-0 h-16 z-20 bg-transparent pointer-events-auto cursor-default"
+            className="absolute top-0 left-0 right-0 h-14 sm:h-16 z-20 bg-slate-950/95 backdrop-blur-md pointer-events-auto cursor-default flex items-center px-4 border-b border-slate-800/60 shadow-md justify-between"
             onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            title="Rose Academy Video Player"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-xs sm:text-sm font-bold text-slate-200 truncate">
+                {lessonTitle || "مشغّل أكاديمية روز"}
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Left Masking Overlay: Completely hides "Watch on YouTube" button */}
+          <div 
+            className="absolute bottom-0 left-0 w-44 sm:w-52 h-12 z-20 bg-slate-950/90 pointer-events-auto cursor-default flex items-center px-3"
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           />
 
-          {/* Bottom Right Logo Masking Overlay to block YouTube Logo redirect */}
+          {/* Bottom Right Logo Masking Overlay: Blocks YouTube logo & external links */}
           <div 
-            className="absolute bottom-0 right-0 w-36 h-14 z-20 bg-transparent pointer-events-auto cursor-default"
+            className="absolute bottom-0 right-0 w-36 h-12 z-20 bg-slate-950/90 pointer-events-auto cursor-default"
             onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           />
