@@ -14,13 +14,12 @@ class LessonResource extends JsonResource
         $user = Auth::user();
         $canAccess = $this->canUserAccess($user);
 
-        $videoUrl = null;
-        $embedUrl = null;
+        $videoStatus = $this->video_status ?? ($this->has_video ? 'ready' : null);
 
         if ($canAccess && $this->has_video) {
             if ($this->video_source === 'youtube') {
                 $embedUrl = $this->getSecureYouTubeEmbedUrl();
-            } else {
+            } else if ($videoStatus === 'ready' || empty($this->video_status)) {
                 // Pass the raw bearer token so VideoJS range requests can be authenticated
                 // without needing Authorization headers (browser <video> elements can't send them)
                 $rawToken = $request->bearerToken();
@@ -41,6 +40,8 @@ class LessonResource extends JsonResource
             'can_access' => $canAccess,
             'has_video' => $this->has_video,
             'video_source' => $this->video_source ?? 'local',
+            'video_status' => $videoStatus,
+            'video_status_message' => $this->getVideoStatusMessage(),
             'video_url' => $videoUrl,
             'embed_url' => $embedUrl,
             'video_duration_formatted' => $this->has_video ? $this->getFormattedDuration() : null,

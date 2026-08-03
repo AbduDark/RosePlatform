@@ -140,6 +140,26 @@ const WatchCoursePage = () => {
     return filteredLessons.length > 0 ? filteredLessons[0] : null;
   }, [filteredLessons, currentLessonId]);
 
+  // Auto-poll lessons data if current lesson is processing
+  useEffect(() => {
+    let timer;
+    if (currentLesson?.video_status === "processing" && courseId) {
+      timer = setInterval(async () => {
+        try {
+          const normalizedData = await getLessonsByCourse(courseId, token);
+          if (normalizedData?.lessons) {
+            setLessons(normalizedData.lessons);
+          }
+        } catch {
+          // ignore transient poll errors
+        }
+      }, 4000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [currentLesson?.video_status, courseId, token]);
+
   // Navigation indexes
   const currentIndex = useMemo(() => {
     if (!currentLesson) return -1;
@@ -331,6 +351,42 @@ const WatchCoursePage = () => {
                     lessonTitle={currentLesson.title}
                     lessonId={currentLesson.id}
                   />
+                ) : currentLesson.video_status === "processing" ? (
+                  /* Video Processing Notice Overlay */
+                  <div
+                    className="relative w-full bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 rounded-2xl flex flex-col items-center justify-center p-8 text-center border border-indigo-500/20"
+                    style={{ minHeight: "380px" }}
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-4 shadow-xl shadow-purple-500/10">
+                      <div className="w-8 h-8 border-3 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      جاري معالجة وتقليص الفيديو... ⚙️
+                    </h3>
+                    <p className="text-sm text-slate-300 max-w-md mb-4 leading-relaxed">
+                      يتم الآن معالجة الفيديو وضغطه على السيرفر ليعمل بأعلى سرعة وبدون تقطيع. سيظهر الفيديو هنا تلقائياً فور انتهاء المعالجة.
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-purple-300 font-semibold bg-purple-500/10 px-4 py-2 rounded-full border border-purple-500/20">
+                      <div className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                      <span>جاري التحديث التلقائي...</span>
+                    </div>
+                  </div>
+                ) : currentLesson.video_status === "failed" ? (
+                  /* Video Failed Notice Overlay */
+                  <div
+                    className="relative w-full bg-gradient-to-br from-slate-900 via-red-950/30 to-slate-900 rounded-2xl flex flex-col items-center justify-center p-8 text-center border border-red-500/20"
+                    style={{ minHeight: "380px" }}
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mb-4">
+                      <FaInfoCircle className="text-3xl" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      فشل في معالجة الفيديو
+                    </h3>
+                    <p className="text-sm text-slate-400 max-w-md mb-4 leading-relaxed">
+                      حدث خطأ غير متوقع أثناء معالجة هذا الفيديو على السيرفر. يرجى التواصل مع المحاضر لإعادة رفع الفيديو.
+                    </p>
+                  </div>
                 ) : (
                   <VideoJSPlayer
                     key={currentLesson.id}

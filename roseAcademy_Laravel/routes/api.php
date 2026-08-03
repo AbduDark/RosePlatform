@@ -59,10 +59,12 @@ Route::get('lessons/{id}',                     [LessonController::class, 'show']
 Route::get('lessons/{lessonId}/comments',      [CommentController::class, 'getLessonComments']);
 Route::get('courses/{id}/ratings',             [RatingController::class, 'index']);
 
-// Video stream — must be public (signed URL is the authorization)
+// Video stream & status — public endpoints
 // The route MUST be named 'lesson.video.stream' for URL::temporarySignedRoute() to resolve it
 Route::get('lessons/{lesson}/stream', [LessonVideoController::class, 'stream'])
      ->name('lesson.video.stream');
+Route::get('lessons/{lesson}/status', [LessonVideoController::class, 'getProcessingStatus'])
+     ->name('lesson.video.status');
 
 // Pagination routes for all models
 Route::get('subscriptions',                    [SubscriptionController::class, 'index']);
@@ -114,7 +116,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Lessons progress
     Route::post('lessons/{id}/progress',               [LessonController::class, 'updateProgress']);
     Route::post('lessons/{id}/complete',               [LessonController::class, 'markCompleted']);
-    Route::get('/lessons/{lesson}/status',             [LessonVideoController::class, 'getProcessingStatus'])->name('lesson.video.status');
 
     // Ratings
     Route::post('ratings',                             [RatingController::class, 'store']);

@@ -333,6 +333,22 @@ export const getVideoInfo = async (lessonId, token) => {
   }
 };
 
+export const getVideoProcessingStatus = async (lessonId, token) => {
+  try {
+    if (!lessonId) throw new Error("lessonId is required");
+    const headers = { Accept: "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    return await fetchJson(`${API_BASE}/lessons/${lessonId}/status`, {
+      method: "GET",
+      headers,
+    });
+  } catch (error) {
+    console.error("Error getting video processing status:", error);
+    throw error;
+  }
+};
+
 // Helper function to extract and normalize lessons data from any API response structure
 export const extractLessonsData = (res) => {
   let obj = res;

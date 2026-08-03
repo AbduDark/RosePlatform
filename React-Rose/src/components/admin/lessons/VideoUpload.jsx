@@ -1,8 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { FiX, FiUpload, FiTrash2, FiVideo, FiCheck, FiAlertCircle, FiClock, FiZap, FiLink } from "react-icons/fi";
+import { FiX, FiUpload, FiTrash2, FiVideo, FiCheck, FiAlertCircle, FiClock, FiZap, FiLink, FiSettings } from "react-icons/fi";
 import { FaYoutube } from "react-icons/fa";
-import { uploadLessonVideo, deleteLessonVideo, saveYouTubeVideoUrl } from "../../../api/lessons";
+import { uploadLessonVideo, deleteLessonVideo, saveYouTubeVideoUrl, getVideoProcessingStatus } from "../../../api/lessons";
 import { isValidYouTubeUrl } from "../../../utils/youtubeHelper";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -14,6 +14,9 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
   const [isSavingYoutube, setIsSavingYoutube] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingMessage, setProcessingMessage] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState(0);
@@ -25,6 +28,62 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
   const fileInputRef = useRef(null);
   const uploadStartTime = useRef(null);
   const uploadedBytes = useRef(0);
+  const pollingTimer = useRef(null);
+
+  const stopPolling = () => {
+    if (pollingTimer.current) {
+      clearInterval(pollingTimer.current);
+      pollingTimer.current = null;
+    }
+  };
+
+  const pollStatus = async (lessonId) => {
+    try {
+      const res = await getVideoProcessingStatus(lessonId, token);
+      const data = res.data || res;
+      if (data) {
+        setProcessingProgress(data.progress || 50);
+        setProcessingMessage(data.message || "جاري معالجة وتقليص الفيديو...");
+
+        if (data.status === "ready") {
+          stopPolling();
+          setIsProcessing(false);
+          setIsUploading(false);
+          setSuccess("🎉 تم الرفع ومعالجة الفيديو بنجاح! الفيديو جاهز للمشاهدة الآن.");
+          setSelectedVideo(null);
+          setVideoPreview(null);
+          if (onVideoUpdated) onVideoUpdated();
+        } else if (data.status === "failed") {
+          stopPolling();
+          setIsProcessing(false);
+          setIsUploading(false);
+          setError("❌ فشل في معالجة الفيديو. يرجى إعادة المحاولة.");
+        }
+      }
+    } catch (e) {
+      console.error("Error polling video status:", e);
+    }
+  };
+
+  const startPollingProcessing = (lessonId) => {
+    stopPolling();
+    setIsProcessing(true);
+    setProcessingProgress(15);
+    setProcessingMessage("جاري بدء معالجة وتقليص الفيديو...");
+    pollStatus(lessonId);
+    pollingTimer.current = setInterval(() => {
+      pollStatus(lessonId);
+    }, 2500);
+  };
+
+  useEffect(() => {
+    if (isOpen && lesson) {
+      if (lesson.video_status === "processing") {
+        startPollingProcessing(lesson.id);
+      }
+    }
+    return () => stopPolling();
+  }, [isOpen, lesson?.id]);
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 Bytes";
@@ -125,21 +184,15 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
         }
       });
 
-      setSuccess(t("videoUpload.uploadSuccess", "تم رفع الفيديو بنجاح"));
-      setSelectedVideo(null);
-      setVideoPreview(null);
-      uploadStartTime.current = null;
-      uploadedBytes.current = 0;
+      // Upload completed 100% -> now transition to server processing phase
+      setUploadProgress(100);
+      startPollingProcessing(lesson.id);
 
-      if (onVideoUpdated) {
-        onVideoUpdated();
-      }
     } catch (err) {
       setError(err.message);
       setUploadProgress(0);
       setUploadSpeed(0);
       setRemainingTime(null);
-    } finally {
       setIsUploading(false);
     }
   };
@@ -397,15 +450,15 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
                     </div>
                   )}
 
-                  {/* Progress Bar */}
-                  {isUploading && (
+                  {/* Upload Progress Bar */}
+                  {isUploading && !isProcessing && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-300">
-                        <span className="flex items-center gap-1">
-                          <FiUpload className="w-4 h-4" />
-                          {t("videoUpload.uploading", "جاري الرفع")}
+                        <span className="flex items-center gap-1 font-medium">
+                          <FiUpload className="w-4 h-4 text-purple-400 animate-bounce" />
+                          {t("videoUpload.uploading", "جاري رفع الملف إلى السيرفر")}
                         </span>
-                        <span className="font-medium">{uploadProgress}%</span>
+                        <span className="font-bold text-purple-300">{uploadProgress}%</span>
                       </div>
                       <div className="w-full bg-gray-600 rounded-full h-3 overflow-hidden">
                         <div
@@ -417,19 +470,47 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
                       </div>
                       <div className="flex justify-between text-xs text-gray-400">
                         <span className="flex items-center gap-1">
-                          <FiZap className="w-3 h-3" />
+                          <FiZap className="w-3 h-3 text-amber-400" />
                           {formatSpeed(uploadSpeed)}
                         </span>
                         <span className="flex items-center gap-1">
-                          <FiClock className="w-3 h-3" />
+                          <FiClock className="w-3 h-3 text-blue-400" />
                           {formatTime(remainingTime)}
                         </span>
                       </div>
                     </div>
                   )}
 
+                  {/* Server Processing Progress Bar */}
+                  {isProcessing && (
+                    <div className="space-y-3 bg-purple-950/60 border border-purple-500/40 p-4 rounded-xl">
+                      <div className="flex items-center justify-between text-sm text-purple-200">
+                        <span className="flex items-center gap-2 font-medium">
+                          <FiSettings className="w-4 h-4 animate-spin text-purple-400" />
+                          {processingMessage || "جاري معالجة وتقليص الفيديو..."}
+                        </span>
+                        <span className="font-bold text-emerald-400 text-base">{processingProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-3.5 overflow-hidden border border-purple-500/20">
+                        <div
+                          className="bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500 relative overflow-hidden"
+                          style={{ width: `${processingProgress}%` }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"></div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-purple-300/80">
+                        <span className="flex items-center gap-1">
+                          <FiClock className="w-3.5 h-3.5 text-purple-400" />
+                          يتم الضغط والتشفير في الخلفية لضمان سرعة التشغيل
+                        </span>
+                        <span className="text-amber-300 font-semibold animate-pulse">⚙️ معالجة نشطة</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Upload Button */}
-                  {!isUploading && (
+                  {!isUploading && !isProcessing && (
                     <button
                       onClick={handleUpload}
                       disabled={isDeleting}

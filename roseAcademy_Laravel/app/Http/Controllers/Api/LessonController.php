@@ -36,9 +36,9 @@ class LessonController extends Controller
             // Search functionality
             if ($request->has('search')) {
                 $search = $request->get('search');
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -84,9 +84,9 @@ class LessonController extends Controller
             // Search functionality
             if ($request->has('search')) {
                 $search = $request->get('search');
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -106,8 +106,8 @@ class LessonController extends Controller
             }
 
             $lessons = $query->orderBy('order', 'asc')
-                           ->orderBy('created_at', 'desc')
-                           ->paginate($request->get('per_page', 15));
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->get('per_page', 15));
 
             return $this->successResponse($lessons, [
                 'ar' => 'تم جلب جميع الدروس بنجاح',
@@ -155,10 +155,10 @@ class LessonController extends Controller
 
             // الفلترة بحسب الجنس للطلاب غير الأدمن إذا كان جنس الطالب محدداً
             if (!$isAdmin && $user && !empty($user->gender)) {
-                $query->where(function($q) use ($user) {
+                $query->where(function ($q) use ($user) {
                     $q->where('target_gender', 'both')
-                      ->orWhere('target_gender', $user->gender)
-                      ->orWhereNull('target_gender');
+                        ->orWhere('target_gender', $user->gender)
+                        ->orWhereNull('target_gender');
                 });
             }
 
@@ -172,20 +172,13 @@ class LessonController extends Controller
                 'lesson_genders' => $lessons->pluck('target_gender', 'id')->toArray(),
             ]);
 
-            // Get the raw API token for embedding in the signed stream URL.
-            // This is needed because the browser's <video> element cannot send
-            // Authorization headers, so the token travels as a query param.
-            $userToken = $user?->currentAccessToken()?->token ?? null;
-            // currentAccessToken()->token is a hashed version — use the plain token from request instead
-            $rawToken = $request->bearerToken();
-
             // تحديد إمكانية الوصول ورابط الفيديو لكل درس
-            $lessons->each(function($lesson) use ($user, $isAdmin, $isSubscribed, $rawToken) {
+            $lessons->each(function ($lesson) use ($user, $isAdmin, $isSubscribed) {
                 $canAccess = $isAdmin || $lesson->is_free || $isSubscribed;
                 $lesson->can_access = $canAccess;
 
                 if ($canAccess && $lesson->has_video) {
-                    $lesson->video_url = ($lesson->video_source === 'youtube') ? null : $lesson->getSignedStreamUrl(240, $rawToken);
+                    $lesson->video_url = ($lesson->video_source === 'youtube') ? null : $lesson->getSignedStreamUrl();
                     $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                     $lesson->video_size_formatted = $lesson->getFormattedSize();
                 } else {
@@ -391,8 +384,7 @@ class LessonController extends Controller
                 if ($lesson->video_source === 'youtube') {
                     $lesson->embed_url = $lesson->getSecureYouTubeEmbedUrl();
                 } else {
-                    $rawToken = $request->bearerToken();
-                    $lesson->video_url = $lesson->getSignedStreamUrl(240, $rawToken);
+                    $lesson->video_url = $lesson->getSignedStreamUrl();
                 }
                 $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                 $lesson->video_size_formatted = $lesson->getFormattedSize();
@@ -406,7 +398,7 @@ class LessonController extends Controller
                     ->first();
 
                 $lesson->progress = [
-                    'is_completed'          => $progress ? (bool) $progress->is_completed : false,
+                    'is_completed' => $progress ? (bool) $progress->is_completed : false,
                     'last_position_seconds' => $progress ? (int) $progress->last_position_seconds : 0,
                 ];
             }
@@ -435,11 +427,11 @@ class LessonController extends Controller
 
             $progress = \App\Models\LessonProgress::updateOrCreate(
                 [
-                    'user_id'   => $user->id,
+                    'user_id' => $user->id,
                     'lesson_id' => $lesson->id,
                 ],
                 [
-                    'course_id'             => $lesson->course_id,
+                    'course_id' => $lesson->course_id,
                     'last_position_seconds' => $position,
                 ]
             );
@@ -466,11 +458,11 @@ class LessonController extends Controller
 
             $progress = \App\Models\LessonProgress::updateOrCreate(
                 [
-                    'user_id'   => $user->id,
+                    'user_id' => $user->id,
                     'lesson_id' => $lesson->id,
                 ],
                 [
-                    'course_id'    => $lesson->course_id,
+                    'course_id' => $lesson->course_id,
                     'is_completed' => true,
                     'completed_at' => now(),
                 ]
@@ -496,18 +488,18 @@ class LessonController extends Controller
             $lesson = Lesson::findOrFail($id);
 
             $videoInfo = [
-                'lesson_id'                => $lesson->id,
-                'has_video'                => $lesson->hasVideo(),
-                'video_status'             => $lesson->video_status,
-                'video_path'               => $lesson->video_path,
-                'video_duration'           => $lesson->video_duration,
-                'video_size'               => $lesson->video_size,
+                'lesson_id' => $lesson->id,
+                'has_video' => $lesson->hasVideo(),
+                'video_status' => $lesson->video_status,
+                'video_path' => $lesson->video_path,
+                'video_duration' => $lesson->video_duration,
+                'video_size' => $lesson->video_size,
                 'video_duration_formatted' => $lesson->getFormattedDuration(),
-                'video_size_formatted'     => $lesson->getFormattedSize(),
-                'is_video_protected'       => $lesson->is_video_protected,
-                'video_file_exists'        => $lesson->videoFileExists(),
-                'video_metadata'           => $lesson->video_metadata,
-                'video_status_message'     => $lesson->getVideoStatusMessage(),
+                'video_size_formatted' => $lesson->getFormattedSize(),
+                'is_video_protected' => $lesson->is_video_protected,
+                'video_file_exists' => $lesson->videoFileExists(),
+                'video_metadata' => $lesson->video_metadata,
+                'video_status_message' => $lesson->getVideoStatusMessage(),
             ];
 
             return $this->successResponse($videoInfo, 'تم جلب معلومات الفيديو بنجاح');

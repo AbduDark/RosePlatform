@@ -198,20 +198,9 @@ public function upload(Request $request, $lessonId)
                     'ip'        => $request->ip(),
                 ]);
             } else {
-                // Premium lesson: require authenticated user with subscription or admin.
-                // The token travels as a query param `_t` because browser <video> elements
-                // cannot send Authorization headers in range requests.
+                // Premium lesson: require authenticated user with subscription or admin
                 /** @var User|null $user */
                 $user = auth('sanctum')->user();
-
-                // Fallback: manually resolve user from the `_t` query param token
-                if (!$user && $request->has('_t')) {
-                    $plainToken = $request->get('_t');
-                    $tokenRecord = \Laravel\Sanctum\PersonalAccessToken::findToken($plainToken);
-                    if ($tokenRecord && $tokenRecord->tokenable) {
-                        $user = $tokenRecord->tokenable;
-                    }
-                }
 
                 if (!$user) {
                     return response()->json([
@@ -236,7 +225,23 @@ public function upload(Request $request, $lessonId)
                 ]);
             }
 
-            // ─── Step 3: Verify video file exists ───────────────────────────────
+            // ─── Step 3: Verify video status and file exist ─────────────────────────
+            if ($lesson->video_status === 'processing') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'الفيديو قيد المعالجة حالياً. يرجى الانتظار لحين انتهاء المعالجة.',
+                    'status'  => 'processing'
+                ], 425);
+            }
+
+            if ($lesson->video_status === 'failed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فشلت معالجة هذا الفيديو. يرجى التواصل مع المحاضر أو إعادة الرفع.',
+                    'status'  => 'failed'
+                ], 400);
+            }
+
             if (!$lesson->hasVideo()) {
                 return $this->errorResponse('الفيديو غير متوفر حالياً', 404);
             }
