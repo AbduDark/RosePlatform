@@ -99,11 +99,8 @@ export const getAllLessons = async (params = {}, token) => {
     
     if (!response.ok) {
       if (response.status === 401) {
-        console.error("Unauthorized error in lessons - clearing token");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        window.location.href = "/auth";
-        return { data: [], meta: null };
+        console.error("Unauthorized error in lessons API");
+        throw new Error("جلسة تسجيل الدخول انتهت. يرجى إعادة تسجيل الدخول.");
       }
       throw new Error(data.message?.en || data.message || `Failed to fetch lessons: ${response.status}`);
     }

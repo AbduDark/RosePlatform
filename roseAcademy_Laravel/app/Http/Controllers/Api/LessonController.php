@@ -349,11 +349,11 @@ class LessonController extends Controller
     /**
      * Show single lesson
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         try {
             /** @var User|null $user */
-            $user = auth('sanctum')->user() ?? auth()->user();
+            $user = $request->user() ?? auth('sanctum')->user() ?? auth()->user();
 
             $lesson = Lesson::with(['course'])->find($id);
 

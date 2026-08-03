@@ -199,10 +199,33 @@ public function upload(Request $request, $lessonId)
                 ]);
             } else {
                 // Premium lesson: require authenticated user with subscription or admin
+                //
+                // IMPORTANT: HTML <video> elements CANNOT send Authorization headers
+                // in their HTTP requests (including Range requests). The user's Sanctum
+                // token is therefore embedded in the signed URL as the `_t` query param.
+                // We must extract it and resolve the user manually.
                 /** @var User|null $user */
                 $user = auth('sanctum')->user();
 
+                // Fallback: resolve user from the `_t` query parameter
+                if (!$user && $request->has('_t')) {
+                    $plainToken = $request->query('_t');
+                    $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($plainToken);
+                    if ($accessToken) {
+                        $user = $accessToken->tokenable;
+                        Log::info('Premium stream: user resolved from _t token', [
+                            'lesson_id' => $lesson->id,
+                            'user_id'   => $user->id,
+                        ]);
+                    }
+                }
+
                 if (!$user) {
+                    Log::warning('Premium stream: no user resolved', [
+                        'lesson_id' => $lesson->id,
+                        'has_t'     => $request->has('_t'),
+                        'ip'        => $request->ip(),
+                    ]);
                     return response()->json([
                         'success' => false,
                         'message' => 'يجب تسجيل الدخول للوصول إلى هذا الدرس',

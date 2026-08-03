@@ -78,9 +78,9 @@ const LessonsManager = () => {
     setFilteredLessons(filtered);
   }, [lessons, searchTerm, selectedFilter, selectedCourse]);
 
-  const fetchLessons = async (pageNum = 1) => {
+  const fetchLessons = async (pageNum = 1, showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
       setError("");
 
       const params = { 
@@ -220,8 +220,8 @@ const LessonsManager = () => {
   };
 
   const handleVideoUpdated = () => {
-    // Refresh lessons data to get updated video status
-    fetchLessons(page);
+    // Refresh lessons data in background without showing full-page loader or reloading modal
+    fetchLessons(page, false);
   };
 
   if (isLoading) {
