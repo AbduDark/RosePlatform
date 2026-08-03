@@ -20,7 +20,8 @@
     "react-icons": "^5.5.0",
     "react-player": "^3.3.1",
     "react-router-dom": "^7.7.1",
-    "video.js": "^8.23.4"
+    "video.js": "^8.23.4",
+    "hls.js": "^1.5.20"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.28.0",

@@ -69,10 +69,14 @@ class ProcessLessonVideo implements ShouldQueue
             }
 
             $sourcePath = storage_path('app/' . $lesson->video_path);
-            $outputDir = storage_path("app/private_videos/lesson_{$lesson->id}");
+            if (!file_exists($sourcePath)) {
+                $sourcePath = storage_path('app/public/' . $lesson->video_path);
+            }
+
+            $outputDir = storage_path("app/hls/lesson_{$lesson->id}");
 
             Log::info("📍 المسار الكامل للفيديو: {$sourcePath}");
-            Log::info("📂 مجلد الإخراج: {$outputDir}");
+            Log::info("📂 مجلد الإخراج (HLS): {$outputDir}");
 
             $this->validateVideoFile($sourcePath);
             $this->createDirectories($outputDir);
@@ -80,8 +84,8 @@ class ProcessLessonVideo implements ShouldQueue
             $lesson->update(['video_status' => 'processing']);
             Cache::put("video_processing_started_{$lesson->id}", time(), 7200);
 
-            $finalVideoPath = $this->processVideo($lesson, $sourcePath, $outputDir);
-            $videoInfo = $this->getVideoInfo($finalVideoPath);
+            $finalVideoPath = $this->processVideoToHls($lesson, $sourcePath, $outputDir);
+            $videoInfo = $this->getVideoInfo($sourcePath);
             $relativePath = $this->getRelativePath($finalVideoPath);
             
             $lesson->update([
@@ -96,10 +100,10 @@ class ProcessLessonVideo implements ShouldQueue
                 'final_file_path' => $relativePath,
                 'processing_time_seconds' => time() - Cache::get("video_processing_started_{$lesson->id}", time()),
                 'file_validated' => true,
-                'protection_applied' => $lesson->is_video_protected,
+                'hls_generated' => str_ends_with($relativePath, '.m3u8'),
             ]);
 
-            Log::info("✅ تمت معالجة وتقليص الفيديو بنجاح للدرس: {$lesson->id}");
+            Log::info("✅ تمت معالجة وتقطيع الفيديو إلى HLS بنجاح للدرس: {$lesson->id}");
 
         } catch (\Exception $e) {
             Log::error("❌ خطأ في معالجة الفيديو للدرس: {$this->lesson->id}", [
@@ -150,41 +154,42 @@ class ProcessLessonVideo implements ShouldQueue
         return 60;
     }
 
-    private function processVideo(Lesson $lesson, string $sourcePath, string $outputDir): string
+    private function processVideoToHls(Lesson $lesson, string $sourcePath, string $outputDir): string
     {
         $fileExtension = pathinfo($sourcePath, PATHINFO_EXTENSION);
-        $compressedPath = $outputDir . '/compressed_video.mp4';
+        $playlistPath = $outputDir . '/playlist.m3u8';
+        $segmentPattern = $outputDir . '/segment_%03d.ts';
 
-        // Attempt FFmpeg Compression if available (optimized for 1 vCPU / 8GB RAM VPS)
+        // Attempt FFmpeg HLS Conversion if available
         if (function_exists('exec')) {
-            Log::info("⚙️ بدء ضغط الفيديو باستخدام FFmpeg للدرس: {$lesson->id}");
-            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -vcodec libx264 -crf 26 -preset faster -acodec aac -b:a 128k -movflags +faststart " . escapeshellarg($compressedPath) . " 2>&1";
+            Log::info("⚙️ بدء تقطيع وتحويل الفيديو لـ HLS باستخدام FFmpeg للدرس: {$lesson->id}");
+            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -codec:v libx264 -crf 23 -preset faster -codec:a aac -b:a 128k -hls_time 6 -hls_playlist_type vod -hls_segment_filename " . escapeshellarg($segmentPattern) . " " . escapeshellarg($playlistPath) . " 2>&1";
             
             $output = [];
             $returnVar = -1;
             exec($command, $output, $returnVar);
 
-            if ($returnVar === 0 && file_exists($compressedPath) && filesize($compressedPath) > 0) {
-                Log::info("✅ تم ضغط الفيديو بنجاح باستخدام FFmpeg: {$compressedPath}");
-                if ($sourcePath !== $compressedPath && file_exists($sourcePath)) {
+            if ($returnVar === 0 && file_exists($playlistPath) && filesize($playlistPath) > 0) {
+                Log::info("✅ تم تحويل الفيديو بنجاح إلى HLS: {$playlistPath}");
+                if ($sourcePath !== $playlistPath && file_exists($sourcePath)) {
                     @unlink($sourcePath);
                 }
-                return $compressedPath;
+                return $playlistPath;
             } else {
-                Log::warning("⚠️ تعذر ضغط الفيديو بـ FFmpeg، سيتم الاحتفاظ بالملف الأصلي: " . implode("\n", array_slice($output, -5)));
+                Log::warning("⚠️ تعذر تحويل الفيديو لـ HLS عبر FFmpeg: " . implode("\n", array_slice($output, -5)));
             }
         }
 
-        // Fallback: Copy to protected directory
-        $finalVideoPath = $outputDir . '/video.' . $fileExtension;
-        if ($sourcePath !== $finalVideoPath) {
-            if (!copy($sourcePath, $finalVideoPath)) {
-                throw new \Exception("فشل في نقل الفيديو إلى المجلد المحمي");
+        // Fallback: Copy raw file if HLS conversion failed
+        $fallbackVideoPath = $outputDir . '/video.' . $fileExtension;
+        if ($sourcePath !== $fallbackVideoPath) {
+            if (!copy($sourcePath, $fallbackVideoPath)) {
+                throw new \Exception("فشل في نقل الفيديو إلى مجلد المعالجة");
             }
             @unlink($sourcePath);
         }
 
-        return $finalVideoPath;
+        return $fallbackVideoPath;
     }
 
     private function getRelativePath(string $fullPath): string

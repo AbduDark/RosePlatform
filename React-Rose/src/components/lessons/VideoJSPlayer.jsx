@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import Hls from "hls.js";
 import {
   FiPlay,
   FiPause,
@@ -18,6 +19,7 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
   const { user } = useAuth();
   const videoRef = useRef(null);
   const containerRef = useRef(null);
+  const hlsRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -50,6 +52,62 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
     setError(null);
     setIsPlaying(false);
 
+    let hls = null;
+
+    // Clean up previous HLS instance if any
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    const isHls = videoUrl.includes(".m3u8") || videoUrl.includes("/stream");
+
+    if (isHls && Hls.isSupported()) {
+      console.log("🎬 initializing hls.js player for video:", videoUrl);
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 90,
+      });
+
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setIsLoading(false);
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.error("Fatal HLS Error:", data);
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log("Network error, attempting HLS reload...");
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log("Media error, attempting HLS recovery...");
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              setError(
+                t("lessons.videoPlayer.loadError", "فشل تحميل الفيديو. يرجى إعادة محاولة التحميل.")
+              );
+              break;
+          }
+        }
+      });
+
+      hlsRef.current = hls;
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS support (e.g. Safari)
+      video.src = videoUrl;
+    } else {
+      // Standard video URL fallback
+      video.src = videoUrl;
+    }
+
     const onLoadedMetadata = () => {
       setDuration(video.duration || 0);
       setIsLoading(false);
@@ -59,7 +117,7 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
       setCurrentTime(video.currentTime || 0);
       if (video.buffered.length > 0) {
         const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-        setBuffered((bufferedEnd / video.duration) * 100);
+        setBuffered((bufferedEnd / (video.duration || 1)) * 100);
       }
     };
 
@@ -69,6 +127,8 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
     };
 
     const onError = (e) => {
+      // Ignore native video errors if HLS is actively managing media
+      if (hlsRef.current) return;
       console.error("Video Error:", e, video.error);
       setIsLoading(false);
       setError(
@@ -88,6 +148,10 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
     video.addEventListener("canplay", onCanPlay);
 
     return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("ended", onEnded);

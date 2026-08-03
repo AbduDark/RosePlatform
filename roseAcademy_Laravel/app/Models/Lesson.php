@@ -125,6 +125,10 @@ class Lesson extends Model
             $params['_t'] = $userToken;
         }
 
+        if ($this->video_path && str_contains($this->video_path, '.m3u8')) {
+            $params['file'] = 'playlist.m3u8';
+        }
+
         $url = URL::temporarySignedRoute(
             'lesson.video.stream',
             now()->addMinutes($expiresInMinutes),

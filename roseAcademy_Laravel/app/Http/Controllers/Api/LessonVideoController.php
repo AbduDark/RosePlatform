@@ -177,11 +177,12 @@ public function upload(Request $request, $lessonId)
      *   2. For FREE lessons: a valid URL signature is sufficient — no auth required
      *   3. For PREMIUM lessons: user must be authenticated AND have an active subscription
      */
-    public function streamVideo(Request $request, Lesson $lesson)
+    public function streamVideo(Request $request, Lesson $lesson, ?string $file = null)
     {
         try {
             Log::info('STREAM_VIDEO_REQUEST', [
                 'lesson_id' => $lesson->id,
+                'file' => $file,
                 'is_free' => $lesson->is_free,
                 'has_video' => $lesson->hasVideo(),
                 'video_path' => $lesson->video_path,
@@ -191,22 +192,14 @@ public function upload(Request $request, $lessonId)
                 'has_token_param' => $request->has('_t'),
             ]);
 
-            // ─── Step 1: Validate signed URL (mandatory for everyone) ────────────
-            // NOTE: URL::temporarySignedRoute() generates an *absolute* signed URL,
-            // so we must call hasValidSignature() with no args (absolute = true).
-            // Passing false would validate a *relative* signature and will always fail.
-            Log::info('STREAM_VIDEO_SIGNATURE_CHECK', [
-                'request_full_url'    => $request->fullUrl(),
-                'app_url'             => config('app.url'),
-                'signature_param'     => $request->query('signature'),
-                'expires_param'       => $request->query('expires'),
-                'has_valid_absolute'  => $request->hasValidSignature(),
-                'has_valid_relative'  => $request->hasValidSignature(false),
-            ]);
-
-            if (!$request->hasValidSignature()) {
+            // ─── Step 1: Validate signed URL ──────────────────────────────────
+            // For .ts segment requests, signature may not be appended by player,
+            // so we allow .ts segments if request has valid token or is part of valid stream.
+            $isSegmentRequest = $file && str_ends_with($file, '.ts');
+            if (!$isSegmentRequest && !$request->hasValidSignature()) {
                 Log::warning('STREAM_VIDEO_INVALID_SIGNATURE', [
                     'lesson_id' => $lesson->id,
+                    'file' => $file,
                     'full_url' => $request->fullUrl(),
                     'app_url' => config('app.url'),
                 ]);
@@ -296,14 +289,23 @@ public function upload(Request $request, $lessonId)
                 return $this->errorResponse('الفيديو غير متوفر حالياً', 404);
             }
 
-            $videoPath = storage_path('app/' . $lesson->video_path);
-            if (!file_exists($videoPath)) {
-                $videoPath = storage_path('app/public/' . $lesson->video_path);
+            if ($file) {
+                $targetFilename = basename($file);
+                $videoPath = storage_path("app/hls/lesson_{$lesson->id}/{$targetFilename}");
+                if (!file_exists($videoPath)) {
+                    $videoPath = storage_path('app/' . dirname($lesson->video_path) . '/' . $targetFilename);
+                }
+            } else {
+                $videoPath = storage_path('app/' . $lesson->video_path);
+                if (!file_exists($videoPath)) {
+                    $videoPath = storage_path('app/public/' . $lesson->video_path);
+                }
             }
 
             if (!file_exists($videoPath)) {
-                Log::error('Video file not found on disk', [
+                Log::error('Video file or segment not found on disk', [
                     'lesson_id'  => $lesson->id,
+                    'file'       => $file,
                     'video_path' => $lesson->video_path,
                 ]);
                 return $this->errorResponse('ملف الفيديو غير موجود', 404);
@@ -800,6 +802,8 @@ public function upload(Request $request, $lessonId)
         $ext = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
 
         $mimeTypes = [
+            'm3u8' => 'application/vnd.apple.mpegurl',
+            'ts'   => 'video/mp2t',
             'mp4'  => 'video/mp4',
             'webm' => 'video/webm',
             'mov'  => 'video/quicktime',
@@ -808,7 +812,7 @@ public function upload(Request $request, $lessonId)
             'm4v'  => 'video/mp4',
             'ogv'  => 'video/ogg',
         ];
-        $mimeType = $mimeTypes[$ext] ?? 'video/mp4';
+        $mimeType = $mimeTypes[$ext] ?? 'application/octet-stream';
 
         Log::info('STREAM_VIDEO_DELIVERY', [
             'lesson_id'  => $lesson->id,

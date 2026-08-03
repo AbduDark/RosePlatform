@@ -61,7 +61,7 @@ Route::get('courses/{id}/ratings',             [RatingController::class, 'index'
 
 // Video stream & status — public endpoints
 // The route MUST be named 'lesson.video.stream' for URL::temporarySignedRoute() to resolve it
-Route::get('lessons/{lesson}/stream', [LessonVideoController::class, 'streamVideo'])
+Route::get('lessons/{lesson}/stream/{file?}', [LessonVideoController::class, 'streamVideo'])
      ->name('lesson.video.stream');
 Route::get('lessons/{lesson}/status', [LessonVideoController::class, 'getProcessingStatus'])
      ->name('lesson.video.status');
