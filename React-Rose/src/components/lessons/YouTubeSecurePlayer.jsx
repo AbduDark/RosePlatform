@@ -4,14 +4,31 @@ import { FaShieldAlt, FaYoutube } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import VideoProtection from "../common/VideoProtection";
 
-const YouTubeSecurePlayer = ({ embedUrl, lessonTitle, lessonId }) => {
+const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
-  if (!embedUrl) {
+  const rawUrl = embedUrl || youtubeUrl;
+
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    if (url.includes("/embed/")) return url;
+    
+    // Extract video ID
+    const pattern = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=0&fs=1&enablejsapi=1`;
+    }
+    return url;
+  };
+
+  const finalEmbedUrl = getEmbedUrl(rawUrl);
+
+  if (!finalEmbedUrl) {
     return (
-      <div className="relative w-full bg-gray-900 rounded-lg p-8 text-center text-gray-400">
+      <div className="relative w-full bg-slate-900 rounded-2xl p-8 text-center text-slate-400 border border-slate-800">
         رابط اليوتيوب غير متوفر أو غير صحيح
       </div>
     );
@@ -38,7 +55,7 @@ const YouTubeSecurePlayer = ({ embedUrl, lessonTitle, lessonId }) => {
           )}
 
           <iframe
-            src={embedUrl}
+            src={finalEmbedUrl}
             title={lessonTitle || "Lesson Video"}
             className="absolute top-0 left-0 w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
