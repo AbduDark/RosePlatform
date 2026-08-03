@@ -17,6 +17,7 @@ fi
 if [ "$1" = "php-fpm" ]; then
     php artisan migrate --force --no-interaction
     php artisan storage:link >/dev/null 2>&1 || true
+    php artisan package:discover --ansi >/dev/null 2>&1 || true
     php artisan optimize:clear
 fi
 
