@@ -8,30 +8,17 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
   const { user } = useAuth();
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
-  // Prevent any clipboard write attempts when player is active
-  React.useEffect(() => {
-    const handleCopy = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    };
-    window.addEventListener("copy", handleCopy, true);
-    return () => {
-      window.removeEventListener("copy", handleCopy, true);
-    };
-  }, []);
-
   const rawUrl = embedUrl || youtubeUrl;
 
   const getEmbedUrl = (url) => {
     if (!url) return null;
     if (url.includes("/embed/")) return url;
-    
+
     // Extract video ID
     const pattern = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
     const match = url.match(pattern);
     if (match && match[1]) {
-      return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=0&fs=0&enablejsapi=1`;
+      return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=0&fs=1&enablejsapi=1&iv_load_policy=3`;
     }
     return url;
   };
@@ -48,12 +35,15 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
 
   return (
     <VideoProtection lessonId={lessonId} userId={user?.id}>
-      <div className="relative w-full bg-black rounded-xl overflow-hidden shadow-2xl group select-none">
+      <div className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl group select-none border border-slate-800">
         {/* Video Wrapper */}
-        <div className="relative" style={{ paddingTop: "56.25%" }}>
+        <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
           {!iframeLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-950 z-10">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+                <span className="text-xs text-slate-400 font-medium">جاري تجهيز المشغل...</span>
+              </div>
             </div>
           )}
 
@@ -61,43 +51,15 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
             src={finalEmbedUrl}
             title={lessonTitle || "Lesson Video"}
             className="absolute top-0 left-0 w-full h-full border-0"
-            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen={false}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+            allowFullScreen={true}
             onLoad={() => setIframeLoaded(true)}
             onContextMenu={(e) => e.preventDefault()}
           />
 
-          {/* Top Bar Masking Header: Completely hides YouTube Channel Name, Avatar, Title, and Copy/Share button */}
-          <div 
-            className="absolute top-0 left-0 right-0 h-14 sm:h-16 z-20 bg-slate-950/95 backdrop-blur-md pointer-events-auto cursor-default flex items-center px-4 border-b border-slate-800/60 shadow-md justify-between"
-            onContextMenu={(e) => e.preventDefault()}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-            <div className="flex items-center gap-2 truncate">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-xs sm:text-sm font-bold text-slate-200 truncate">
-                {lessonTitle || "مشغّل أكاديمية روز"}
-              </span>
-            </div>
-          </div>
-
-          {/* Bottom Left Masking Overlay: Completely hides "Watch on YouTube" button */}
-          <div 
-            className="absolute bottom-0 left-0 w-44 sm:w-52 h-12 z-20 bg-slate-950/90 pointer-events-auto cursor-default flex items-center px-3"
-            onContextMenu={(e) => e.preventDefault()}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          />
-
-          {/* Bottom Right Logo Masking Overlay: Blocks YouTube logo & external links */}
-          <div 
-            className="absolute bottom-0 right-0 w-36 h-12 z-20 bg-slate-950/90 pointer-events-auto cursor-default"
-            onContextMenu={(e) => e.preventDefault()}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          />
-
-          {/* Security Watermark floating */}
+          {/* Security Watermark floating cleanly over video */}
           {user && (
-            <div className="absolute top-1/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none opacity-15 text-white text-xl font-bold rotate-[-25deg] whitespace-nowrap z-25">
+            <div className="absolute top-1/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none opacity-20 text-white text-sm sm:text-base font-bold rotate-[-20deg] whitespace-nowrap z-20 bg-slate-950/40 px-3 py-1 rounded-lg backdrop-blur-[2px] border border-white/10">
               {user.name || user.email} • ID: {user.id}
             </div>
           )}
