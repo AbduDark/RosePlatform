@@ -26,19 +26,34 @@ export const AuthProvider = ({ children }) => {
       const deviceId = getDeviceIdentifier();
       const deviceInfo = getDeviceInfo();
       
-      const data = await login(email, password, deviceId, deviceInfo);
-      setUser(data.data.user);
-      setToken(data.data.token);
-      localStorage.setItem("user", JSON.stringify(data.data.user));
-      localStorage.setItem("token", data.data.token);
+      const res = await login(email, password, deviceId, deviceInfo);
+      
+      // Safely extract user and token supporting both wrapped (res.data) and direct (res) structures
+      const payload = res?.data || res;
+      const currentUser = payload?.user;
+      const userToken = payload?.token;
 
-      if (data.data.user.role === "admin") {
+      if (!currentUser) {
+        const errorMsg = typeof res?.message === 'object' 
+          ? (res.message.ar || res.message.en) 
+          : (res?.message || "فشل تسجيل الدخول: لم يتم استلام بيانات المستخدم");
+        throw new Error(errorMsg);
+      }
+
+      setUser(currentUser);
+      setToken(userToken);
+      localStorage.setItem("user", JSON.stringify(currentUser));
+      if (userToken) {
+        localStorage.setItem("token", userToken);
+      }
+
+      if (currentUser.role === "admin") {
         navigate("/admin/overview");
       } else {
         navigate("/student-dashboard/subscriptions");
       }
 
-      return data;
+      return res;
     } catch (error) {
       console.error("Login error:", error);
       throw error;

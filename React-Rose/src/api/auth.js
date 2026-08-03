@@ -32,9 +32,10 @@ export const login = async (email, password, deviceId = null, deviceInfo = null)
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(
-      data.message.ar || "Login failed. Please check your credentials."
-    );
+    const errorMsg = typeof data.message === 'object'
+      ? (data.message.ar || data.message.en || "Login failed. Please check your credentials.")
+      : (data.message || "Login failed. Please check your credentials.");
+    throw new Error(errorMsg);
   }
 
   return data;

@@ -19,8 +19,11 @@ const Login = () => {
     setError("");
     try {
       const res = await login(email, password);
-      if (!res.success) {
-        setError(res.message?.en || t("auth.login.loginFailed"));
+      if (res && res.success === false) {
+        const msg = typeof res.message === 'object'
+          ? (res.message.ar || res.message.en)
+          : res.message;
+        setError(msg || t("auth.login.loginFailed"));
       }
     } catch (error) {
       setError(error.message || t("auth.login.loginFailed"));
