@@ -402,9 +402,10 @@ function UpdateLesson({
           )}
 
           {videoError && (
-            <div className="mb-4 p-3 bg-red-600/20 border border-red-500 rounded-lg text-red-300">
-              {videoError}
-            </div>
+            <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-300 text-sm flex items-center gap-2">
+            <FiAlertCircle className="w-5 h-5 flex-shrink-0" />
+            {typeof videoError === "object" ? (videoError.ar || videoError.en || JSON.stringify(videoError)) : String(videoError)}
+          </div>
           )}
 
           {/* Upload New Video */}

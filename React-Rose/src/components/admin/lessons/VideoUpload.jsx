@@ -295,14 +295,14 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
         {error && (
           <div className="mb-4 p-3 bg-red-600/20 border border-red-500 rounded-lg text-red-300 flex items-center gap-2">
             <FiAlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
+            <span>{typeof error === "object" ? (error.ar || error.en || JSON.stringify(error)) : String(error)}</span>
           </div>
         )}
 
         {success && (
           <div className="mb-4 p-3 bg-green-600/20 border border-green-500 rounded-lg text-green-300 flex items-center gap-2">
             <FiCheck className="w-4 h-4 flex-shrink-0" />
-            <span>{success}</span>
+            <span>{typeof success === "object" ? (success.ar || success.en || JSON.stringify(success)) : String(success)}</span>
           </div>
         )}
 

@@ -1,6 +1,40 @@
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
+// Helper: pick localized message with safe string fallback support
+const getMessage = (data, lang = "ar") => {
+  if (!data) return null;
+
+  // Handle direct string messages
+  if (typeof data.message === "string") return data.message;
+
+  // Handle localized message objects { ar: "...", en: "..." }
+  if (typeof data.message === "object" && data.message !== null) {
+    const message = data.message[lang] || data.message.ar || data.message.en || Object.values(data.message)[0];
+    return typeof message === "string" ? message : JSON.stringify(message);
+  }
+
+  // Handle error messages
+  if (data.error) {
+    if (typeof data.error === "string") return data.error;
+    if (typeof data.error === "object" && data.error !== null) {
+      const error = data.error[lang] || data.error.ar || data.error.en || Object.values(data.error)[0];
+      return typeof error === "string" ? error : JSON.stringify(error);
+    }
+  }
+
+  // Handle validation errors
+  if (data.errors && typeof data.errors === "object") {
+    const firstError = Object.values(data.errors)[0];
+    if (Array.isArray(firstError)) {
+      return firstError[0];
+    }
+    return typeof firstError === "string" ? firstError : JSON.stringify(firstError);
+  }
+
+  return null;
+};
+
 // Helper function for handling API responses
 const fetchJson = async (url, options = {}) => {
   const response = await fetch(url, options);
@@ -19,15 +53,7 @@ const fetchJson = async (url, options = {}) => {
   }
 
   if (!response.ok) {
-    // Handle different error response formats
-    let errorMessage = `Server error (${response.status})`;
-    
-    if (typeof data === "object" && data?.message) {
-      errorMessage = data.message;
-    } else if (typeof data === "string") {
-      errorMessage = `${errorMessage}: ${data.substring(0, 200)}`;
-    }
-    
+    const errorMessage = getMessage(data) || (typeof data === "string" ? data.substring(0, 200) : `Server error (${response.status})`);
     const error = new Error(errorMessage);
     error.status = response.status;
     error.data = data;
@@ -240,7 +266,8 @@ export const uploadLessonVideo = async (lessonId, videoFile, token, onProgress =
           } else {
             try {
               const errorData = JSON.parse(xhr.responseText);
-              reject(new Error(errorData.message || `Upload failed (${xhr.status})`));
+              const errMsg = getMessage(errorData) || `Upload failed (${xhr.status})`;
+              reject(new Error(errMsg));
             } catch (parseError) {
               reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
             }
