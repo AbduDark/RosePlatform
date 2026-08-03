@@ -767,14 +767,6 @@ public function upload(Request $request, $lessonId)
     /**
      * Stream a video file with proper HTTP Range (byte-range) support.
      *
-     * HTML5 <video> elements REQUIRE Range request support (206 Partial Content)
-     * to function correctly. Without this, browsers return MediaError code 4.
-     */
-    private function streamVideoFile(Request $request, string $videoPath, Lesson $lesson)
-    {
-    /**
-     * Stream a video file with proper HTTP Range (byte-range) support.
-     *
      * Uses Symfony BinaryFileResponse (via response()->file) which natively handles:
      * - 206 Partial Content byte ranges required by HTML5 <video> elements
      * - Content-Type, Content-Length, Accept-Ranges
