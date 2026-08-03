@@ -824,33 +824,15 @@ public function upload(Request $request, $lessonId)
             'video_path' => $videoPath,
             'mime_type'  => $mimeType,
             'file_size'  => filesize($videoPath),
-            'range'      => $request->header('Range'),
-            'method'     => 'x-accel-redirect',
+            'ext'        => $ext,
         ]);
 
-        // ── Build the internal Nginx URI ─────────────────────────────────────
-        // $videoPath is absolute, e.g. /var/www/html/storage/app/public/videos/xxx.mp4
-        // We strip the storage/app prefix and prepend /protected-videos/ so Nginx
-        // can locate it via the `alias` directive in the internal location block.
-        $storageAppPath = storage_path('app') . '/';
-        if (str_starts_with($videoPath, $storageAppPath)) {
-            $relativePath  = substr($videoPath, strlen($storageAppPath));
-            $internalUri   = '/protected-videos/' . $relativePath;
-        } else {
-            // Fallback: path outside storage/app — stream via BinaryFileResponse
-            Log::warning('STREAM_VIDEO_PATH_OUTSIDE_STORAGE', [
-                'lesson_id'  => $lesson->id,
-                'video_path' => $videoPath,
-            ]);
-            return $this->streamWithBinaryResponse($videoPath, $mimeType);
-        }
-
-        return response('', 200, [
-            'X-Accel-Redirect'    => $internalUri,
+        return response()->file($videoPath, [
             'Content-Type'        => $mimeType,
             'Content-Disposition' => 'inline',
             'Accept-Ranges'       => 'bytes',
-            'Cache-Control'       => 'private, max-age=3600',
+            'Cache-Control'       => $ext === 'm3u8' ? 'no-cache, no-store, must-revalidate' : 'public, max-age=31536000',
+            'X-Accel-Buffering'   => 'no',
         ]);
     }
 
