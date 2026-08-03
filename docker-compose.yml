@@ -44,7 +44,7 @@ services:
     build:
       context: ./roseAcademy_Laravel
       dockerfile: Dockerfile
-    command: php artisan queue:work --queue=default,video-processing --sleep=3 --tries=3 --timeout=7200 --memory=1024
+    command: php artisan queue:work --queue=default,video-processing --sleep=3 --tries=3 --timeout=7200 --memory=512
     volumes:
       - ./roseAcademy_Laravel:/var/www/html
       - backend_vendor:/var/www/html/vendor

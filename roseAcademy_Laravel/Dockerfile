@@ -22,6 +22,8 @@ RUN { \
     echo "max_file_uploads = 5"; \
 } > /usr/local/etc/php/conf.d/uploads.ini
 
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-custom.conf
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint
 ENTRYPOINT ["docker-entrypoint"]
