@@ -143,6 +143,16 @@ class LessonController extends Controller
 
             $query = $course->lessons();
 
+            // Log total lessons before filtering
+            $totalLessonsCount = $course->lessons()->count();
+            Log::info('Lessons debug', [
+                'course_id' => $courseId,
+                'total_lessons' => $totalLessonsCount,
+                'user_id' => $user?->id,
+                'user_gender' => $user?->gender,
+                'is_admin' => $isAdmin,
+            ]);
+
             // الفلترة بحسب الجنس للطلاب غير الأدمن إذا كان جنس الطالب محدداً
             if (!$isAdmin && $user && !empty($user->gender)) {
                 $query->where(function($q) use ($user) {
@@ -155,6 +165,12 @@ class LessonController extends Controller
             $lessons = $query->orderBy('order', 'asc')
                 ->orderBy('created_at', 'asc')
                 ->get();
+
+            Log::info('Lessons after gender filter', [
+                'course_id' => $courseId,
+                'filtered_count' => $lessons->count(),
+                'lesson_genders' => $lessons->pluck('target_gender', 'id')->toArray(),
+            ]);
 
             // تحديد إمكانية الوصول ورابط الفيديو لكل درس
             $lessons->each(function($lesson) use ($user, $isAdmin, $isSubscribed) {

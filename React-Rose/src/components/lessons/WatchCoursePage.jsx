@@ -62,7 +62,13 @@ const WatchCoursePage = () => {
       // 1. Fetch lessons & course state from lessons endpoint
       const response = await getLessonsByCourse(courseId, token);
       
+      console.log("Raw API response:", response);
+      
       const payload = response?.data || response || {};
+      console.log("Extracted payload:", payload);
+      console.log("Lessons array:", payload.lessons);
+      console.log("User info:", { gender: user?.gender, isAdmin });
+      
       const fetchedLessons = payload.lessons || [];
       const fetchedCourse = payload.course || null;
       const isSubscribed = Boolean(payload.user_subscribed || isAdmin);
@@ -86,6 +92,7 @@ const WatchCoursePage = () => {
 
       // Check if no lessons exist for this course
       if (fetchedLessons.length === 0) {
+        console.warn("No lessons found for course", courseId, "Full response:", response);
         setError(t("lessons.sidebar.noEpisodes", "لا توجد حلقات متاحة لهذه الدورة"));
         setIsLoading(false);
         return;
