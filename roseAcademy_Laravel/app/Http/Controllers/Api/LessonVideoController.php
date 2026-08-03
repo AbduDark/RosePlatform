@@ -777,21 +777,27 @@ public function upload(Request $request, $lessonId)
     // }
 
     /**
-     * Stream a video file with full HTTP Range (byte-range) support.
+     * Stream a video file via Nginx X-Accel-Redirect (preferred) or
+     * Symfony BinaryFileResponse (fallback).
      *
-     * HTML5 <video> elements require 206 Partial Content responses for
-     * seeking and buffering to work correctly. response()->file() sends
-     * 200 OK with the full file and does NOT handle Range requests —
-     * this causes MediaError in Chrome/Firefox.
+     * ── Why X-Accel-Redirect? ────────────────────────────────────────────────
+     * PHP streaming (response()->stream / response()->file) passes data through
+     * PHP-FPM → Nginx → browser. PHP-FPM output buffering and Nginx fastcgi
+     * buffers prevent true byte-range streaming, causing MediaError code 4.
      *
-     * This method manually parses the Range header and returns:
-     *   - 206 Partial Content  (when Range header is present)
-     *   - 200 OK               (full file, no Range header)
+     * X-Accel-Redirect tells Nginx to serve the file directly from disk after
+     * PHP has done the auth check. Nginx handles Range requests natively with
+     * 206 Partial Content, zero PHP memory overhead, and full seek support.
+     *
+     * ── Setup required in nginx.conf ────────────────────────────────────────
+     *   location /protected-videos/ {
+     *       internal;                          # not accessible from outside
+     *       alias /var/www/html/storage/app/;  # maps to storage/app/
+     *   }
      */
     private function streamVideoFile(Request $request, string $videoPath, Lesson $lesson)
     {
-        $fileSize = filesize($videoPath);
-        $ext      = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
 
         $mimeTypes = [
             'mp4'  => 'video/mp4',
@@ -808,85 +814,52 @@ public function upload(Request $request, $lessonId)
             'lesson_id'  => $lesson->id,
             'video_path' => $videoPath,
             'mime_type'  => $mimeType,
-            'file_size'  => $fileSize,
+            'file_size'  => filesize($videoPath),
             'range'      => $request->header('Range'),
+            'method'     => 'x-accel-redirect',
         ]);
 
-        $start = 0;
-        $end   = $fileSize - 1;
-        $rangeHeader = $request->header('Range');
-
-        // ── Handle Range request (byte-range) ───────────────────────────────
-        if ($rangeHeader && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $matches)) {
-            $start = $matches[1] !== '' ? (int) $matches[1] : 0;
-            $end   = $matches[2] !== '' ? (int) $matches[2] : $fileSize - 1;
-
-            // Clamp to valid bounds
-            $start = max(0, min($start, $fileSize - 1));
-            $end   = max($start, min($end, $fileSize - 1));
-
-            $length = $end - $start + 1;
-
-            $stream = fopen($videoPath, 'rb');
-            if ($stream === false) {
-                return $this->errorResponse('لا يمكن قراءة ملف الفيديو', 500);
-            }
-            fseek($stream, $start);
-
-            return response()->stream(
-                function () use ($stream, $length) {
-                    $remaining = $length;
-                    $chunkSize = 1024 * 256; // 256 KB chunks
-
-                    while ($remaining > 0 && !feof($stream)) {
-                        $readSize = min($chunkSize, $remaining);
-                        $data     = fread($stream, $readSize);
-                        if ($data === false) break;
-                        echo $data;
-                        flush();
-                        $remaining -= strlen($data);
-                    }
-                    fclose($stream);
-                },
-                206,
-                [
-                    'Content-Type'        => $mimeType,
-                    'Content-Disposition' => 'inline',
-                    'Accept-Ranges'       => 'bytes',
-                    'Content-Range'       => "bytes {$start}-{$end}/{$fileSize}",
-                    'Content-Length'      => $length,
-                    'Cache-Control'       => 'private, max-age=3600',
-                    'X-Accel-Buffering'   => 'no',
-                ]
-            );
+        // ── Build the internal Nginx URI ─────────────────────────────────────
+        // $videoPath is absolute, e.g. /var/www/html/storage/app/public/videos/xxx.mp4
+        // We strip the storage/app prefix and prepend /protected-videos/ so Nginx
+        // can locate it via the `alias` directive in the internal location block.
+        $storageAppPath = storage_path('app') . '/';
+        if (str_starts_with($videoPath, $storageAppPath)) {
+            $relativePath  = substr($videoPath, strlen($storageAppPath));
+            $internalUri   = '/protected-videos/' . $relativePath;
+        } else {
+            // Fallback: path outside storage/app — stream via BinaryFileResponse
+            Log::warning('STREAM_VIDEO_PATH_OUTSIDE_STORAGE', [
+                'lesson_id'  => $lesson->id,
+                'video_path' => $videoPath,
+            ]);
+            return $this->streamWithBinaryResponse($videoPath, $mimeType);
         }
 
-        // ── Full file response (no Range header) ────────────────────────────
-        $stream = fopen($videoPath, 'rb');
-        if ($stream === false) {
-            return $this->errorResponse('لا يمكن قراءة ملف الفيديو', 500);
-        }
+        return response('', 200, [
+            'X-Accel-Redirect'    => $internalUri,
+            'Content-Type'        => $mimeType,
+            'Content-Disposition' => 'inline',
+            'Accept-Ranges'       => 'bytes',
+            'Cache-Control'       => 'private, max-age=3600',
+        ]);
+    }
 
-        return response()->stream(
-            function () use ($stream) {
-                $chunkSize = 1024 * 256; // 256 KB chunks
-                while (!feof($stream)) {
-                    $data = fread($stream, $chunkSize);
-                    if ($data === false) break;
-                    echo $data;
-                    flush();
-                }
-                fclose($stream);
-            },
-            200,
-            [
-                'Content-Type'        => $mimeType,
-                'Content-Disposition' => 'inline',
-                'Accept-Ranges'       => 'bytes',
-                'Content-Length'      => $fileSize,
-                'Cache-Control'       => 'private, max-age=3600',
-                'X-Accel-Buffering'   => 'no',
-            ]
-        );
+    /**
+     * Fallback: stream via Symfony BinaryFileResponse.
+     * Symfony's BinaryFileResponse DOES handle Range requests via prepare(),
+     * but requires the request object to be passed through the middleware pipeline.
+     * Used only when the file path is outside the standard storage/app directory.
+     */
+    private function streamWithBinaryResponse(string $videoPath, string $mimeType)
+    {
+        return response()->file($videoPath, [
+            'Content-Type'        => $mimeType,
+            'Content-Disposition' => 'inline',
+            'Accept-Ranges'       => 'bytes',
+            'Cache-Control'       => 'private, max-age=3600',
+            'X-Accel-Buffering'   => 'no',
+        ]);
     }
 }
+

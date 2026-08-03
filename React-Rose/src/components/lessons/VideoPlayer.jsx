@@ -274,11 +274,6 @@ const VideoPlayer = ({ lessonId, lessonData, onLessonChange, onVideoEnd }) => {
       }
 
       videoRef.current.src = videoUrl;
-      
-      if (videoRef.current) {
-        videoRef.current.setAttribute('crossorigin', 'anonymous');
-      }
-      
       videoRef.current.load();
 
       videoRef.current.onerror = (e) => {
@@ -571,7 +566,6 @@ const VideoPlayer = ({ lessonId, lessonData, onLessonChange, onVideoEnd }) => {
             preload="metadata"
             disablePictureInPicture
             controlsList="nodownload nofullscreen noremoteplayback"
-            crossOrigin="anonymous"
             onContextMenu={(e) => e.preventDefault()}
           />
 

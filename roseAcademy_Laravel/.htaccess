@@ -46,13 +46,8 @@
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 </IfModule>
 
-# CORS headers for API (Laravel will handle OPTIONS)
-<IfModule mod_headers.c>
-    Header always set Access-Control-Allow-Origin "http://localhost:5000"
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-TOKEN"
-    Header always set Access-Control-Max-Age "86400"
-</IfModule>
+# CORS is handled entirely by Nginx — do NOT add CORS headers here.
+# Duplicate Access-Control-Allow-Origin headers cause MediaError code 4 in browsers.
 
 # Compression
 <IfModule mod_deflate.c>
