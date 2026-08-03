@@ -172,13 +172,20 @@ class LessonController extends Controller
                 'lesson_genders' => $lessons->pluck('target_gender', 'id')->toArray(),
             ]);
 
+            // Get the raw API token for embedding in the signed stream URL.
+            // This is needed because the browser's <video> element cannot send
+            // Authorization headers, so the token travels as a query param.
+            $userToken = $user?->currentAccessToken()?->token ?? null;
+            // currentAccessToken()->token is a hashed version — use the plain token from request instead
+            $rawToken = $request->bearerToken();
+
             // تحديد إمكانية الوصول ورابط الفيديو لكل درس
-            $lessons->each(function($lesson) use ($user, $isAdmin, $isSubscribed) {
+            $lessons->each(function($lesson) use ($user, $isAdmin, $isSubscribed, $rawToken) {
                 $canAccess = $isAdmin || $lesson->is_free || $isSubscribed;
                 $lesson->can_access = $canAccess;
 
                 if ($canAccess && $lesson->has_video) {
-                    $lesson->video_url = $lesson->getVideoDirectUrl();
+                    $lesson->video_url = ($lesson->video_source === 'youtube') ? null : $lesson->getSignedStreamUrl(240, $rawToken);
                     $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                     $lesson->video_size_formatted = $lesson->getFormattedSize();
                 } else {
@@ -384,7 +391,8 @@ class LessonController extends Controller
                 if ($lesson->video_source === 'youtube') {
                     $lesson->embed_url = $lesson->getSecureYouTubeEmbedUrl();
                 } else {
-                    $lesson->video_url = $lesson->getVideoDirectUrl();
+                    $rawToken = $request->bearerToken();
+                    $lesson->video_url = $lesson->getSignedStreamUrl(240, $rawToken);
                 }
                 $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                 $lesson->video_size_formatted = $lesson->getFormattedSize();

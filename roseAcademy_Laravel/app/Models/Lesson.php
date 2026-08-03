@@ -96,41 +96,33 @@ class Lesson extends Model
     }
 
     /**
-     * Get direct video URL
+     * Get a signed, time-limited stream URL for video protection.
+     *
+     * @param  int         $expiresInMinutes  How long the URL stays valid (default 4 hours)
+     * @param  string|null $userToken         Sanctum API token to embed for premium lesson auth.
+     *                                        Required for premium (non-free) lessons because the
+     *                                        browser's <video> element cannot send custom headers.
      */
-   /**
- * Get direct video URL
- */
-public function getVideoDirectUrl(): string
-{
-    if (!$this->hasVideo()) {
-        return '';
+    public function getSignedStreamUrl(int $expiresInMinutes = 240, ?string $userToken = null): string
+    {
+        if (!$this->hasVideo()) {
+            return '';
+        }
+
+        $params = ['lesson' => $this->id];
+
+        // Embed the user token so the stream endpoint can authenticate premium lesson requests
+        // without relying on the Authorization header (browser <video> elements don't send it).
+        if ($userToken && !$this->is_free) {
+            $params['_t'] = $userToken;
+        }
+
+        return URL::temporarySignedRoute(
+            'lesson.video.stream',
+            now()->addMinutes($expiresInMinutes),
+            $params
+        );
     }
-
-    // المسار النسبي للفيديو
-    $relativePath = str_replace('public/', '', $this->video_path);
-
-    // إرجاع الرابط المباشر
-    return url('storage/' . $relativePath);
-}
-
-/**
- * Get video stream URL
- */
-public function getVideoStreamUrl(?string $token = null): string
-{
-    if (!$this->hasVideo()) {
-        return '';
-    }
-
-    $url = url("api/lessons/{$this->id}/stream");
-    if ($token) {
-        $url .= "?token={$token}";
-    }
-
-    return $url;
-}
-
 
     /**
      * Get video status message

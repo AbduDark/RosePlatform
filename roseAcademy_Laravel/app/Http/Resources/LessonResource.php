@@ -21,7 +21,10 @@ class LessonResource extends JsonResource
             if ($this->video_source === 'youtube') {
                 $embedUrl = $this->getSecureYouTubeEmbedUrl();
             } else {
-                $videoUrl = $this->getVideoDirectUrl();
+                // Pass the raw bearer token so VideoJS range requests can be authenticated
+                // without needing Authorization headers (browser <video> elements can't send them)
+                $rawToken = $request->bearerToken();
+                $videoUrl = $this->getSignedStreamUrl(240, $rawToken);
             }
         }
 

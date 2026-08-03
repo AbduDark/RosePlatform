@@ -64,7 +64,7 @@ $videoPath = str_replace('storage/', '', $videoPath);
                 'video_path' => $videoPath,
                 'video_size' => $videoSize,
                 'video_duration' => $videoDuration,
-                'video_url' => $lesson->getVideoDirectUrl(),
+                'video_url' => $lesson->getSignedStreamUrl(),
                 'formatted_duration' => $this->formatDuration($lesson->video_duration),
                 'formatted_size' => $this->formatSize($lesson->video_size),
                 'message' => 'تم رفع الفيديو بنجاح'
@@ -106,7 +106,7 @@ $videoPath = str_replace('storage/', '', $videoPath);
             if ($lesson->video_source === 'youtube') {
                 $embedUrl = $lesson->getSecureYouTubeEmbedUrl();
             } else if ($hasLocalVideo) {
-                $videoUrl = $lesson->getVideoDirectUrl();
+                $videoUrl = $lesson->getSignedStreamUrl();
             }
 
             return $this->successResponse([
