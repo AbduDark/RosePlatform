@@ -158,7 +158,7 @@ class ProcessLessonVideo implements ShouldQueue
         // Attempt FFmpeg Compression if available (optimized for 1 vCPU / 8GB RAM VPS)
         if (function_exists('exec')) {
             Log::info("⚙️ بدء ضغط الفيديو باستخدام FFmpeg للدرس: {$lesson->id}");
-            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -vcodec libx264 -crf 26 -preset faster -acodec aac -b:a 128k " . escapeshellarg($compressedPath) . " 2>&1";
+            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -vcodec libx264 -crf 26 -preset faster -acodec aac -b:a 128k -movflags +faststart " . escapeshellarg($compressedPath) . " 2>&1";
             
             $output = [];
             $returnVar = -1;
