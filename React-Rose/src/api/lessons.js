@@ -229,10 +229,10 @@ export const uploadLessonVideo = async (lessonId, videoFile, token, onProgress =
       throw new Error("Please select a valid video file");
     }
 
-    // Check file size (max 500MB)
-    const maxSize = 500 * 1024 * 1024; // 500MB
+    // Check file size (max 10GB)
+    const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
     if (videoFile.size > maxSize) {
-      throw new Error("Video file size must be less than 500MB");
+      throw new Error("Video file size must be less than 10GB");
     }
 
     const formData = new FormData();

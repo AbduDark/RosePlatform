@@ -371,50 +371,80 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
           </div>
         ) : (
         <div className="space-y-4">
-          {/* Drag & Drop Zone */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => !isUploading && !isDeleting && fileInputRef.current?.click()}
-            className={`
-              relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
-              ${isDragging 
-                ? "border-purple-500 bg-purple-500/10" 
-                : "border-gray-600 hover:border-purple-500/50 bg-gray-700/50"
-              }
-              ${(isUploading || isDeleting) ? "opacity-50 cursor-not-allowed" : ""}
-            `}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              onChange={handleFileInputChange}
-              disabled={isUploading || isDeleting}
-              className="hidden"
-            />
-            
-            <div className="flex flex-col items-center gap-3">
-              <div className={`p-4 rounded-full ${isDragging ? "bg-purple-500/20" : "bg-gray-600"}`}>
-                <FiUpload className={`w-8 h-8 ${isDragging ? "text-purple-400" : "text-gray-300"}`} />
+          {/* Server Processing Progress Bar (Shown whether file selected or background processing on open) */}
+          {isProcessing && (
+            <div className="space-y-3 bg-purple-950/60 border border-purple-500/40 p-4 rounded-xl shadow-lg">
+              <div className="flex items-center justify-between text-sm text-purple-200">
+                <span className="flex items-center gap-2 font-medium">
+                  <FiSettings className="w-4 h-4 animate-spin text-purple-400" />
+                  {processingMessage || "جاري معالجة وتقليص الفيديو..."}
+                </span>
+                <span className="font-bold text-emerald-400 text-base">{processingProgress}%</span>
               </div>
-              <div>
-                <p className="text-white font-medium mb-1">
-                  {t("videoUpload.dragDropText", "اسحب وأفلت الفيديو هنا")}
-                </p>
-                <p className="text-gray-400 text-sm">
-                  {t("videoUpload.orClickText", "أو انقر لاختيار ملف")}
-                </p>
+              <div className="w-full bg-gray-700 rounded-full h-3.5 overflow-hidden border border-purple-500/20">
+                <div
+                  className="bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500 relative overflow-hidden"
+                  style={{ width: `${processingProgress}%` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"></div>
+                </div>
               </div>
-              <p className="text-xs text-gray-500">
-                {t("videoUpload.supportedFormats", "الصيغ المدعومة")}: MP4, WebM, AVI, MOV (Max: 500MB)
-              </p>
+              <div className="flex items-center justify-between text-xs text-purple-300/80">
+                <span className="flex items-center gap-1">
+                  <FiClock className="w-3.5 h-3.5 text-purple-400" />
+                  يتم الضغط والتشفير في الخلفية لضمان سرعة التشغيل
+                </span>
+                <span className="text-amber-300 font-semibold animate-pulse">⚙️ معالجة نشطة</span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Drag & Drop Zone */}
+          {!isProcessing && (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => !isUploading && !isDeleting && fileInputRef.current?.click()}
+              className={`
+                relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
+                ${isDragging 
+                  ? "border-purple-500 bg-purple-500/10" 
+                  : "border-gray-600 hover:border-purple-500/50 bg-gray-700/50"
+                }
+                ${(isUploading || isDeleting) ? "opacity-50 cursor-not-allowed" : ""}
+              `}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleFileInputChange}
+                disabled={isUploading || isDeleting}
+                className="hidden"
+              />
+              
+              <div className="flex flex-col items-center gap-3">
+                <div className={`p-4 rounded-full ${isDragging ? "bg-purple-500/20" : "bg-gray-600"}`}>
+                  <FiUpload className={`w-8 h-8 ${isDragging ? "text-purple-400" : "text-gray-300"}`} />
+                </div>
+                <div>
+                  <p className="text-white font-medium mb-1">
+                    {t("videoUpload.dragDropText", "اسحب وأفلت الفيديو هنا")}
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    {t("videoUpload.orClickText", "أو انقر لاختيار ملف")}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {t("videoUpload.supportedFormats", "الصيغ المدعومة")}: MP4, WebM, AVI, MOV (Max: 10GB)
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Video Preview & Upload */}
-          {selectedVideo && (
+          {selectedVideo && !isProcessing && (
             <div className="p-4 bg-gray-700 rounded-lg space-y-4">
               <div className="flex items-start gap-3">
                 <FiVideo className="w-8 h-8 text-purple-400 flex-shrink-0 mt-1" />
@@ -451,7 +481,7 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
                   )}
 
                   {/* Upload Progress Bar */}
-                  {isUploading && !isProcessing && (
+                  {isUploading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-300">
                         <span className="flex items-center gap-1 font-medium">
@@ -481,36 +511,8 @@ function VideoUpload({ lesson, onVideoUpdated, isOpen, onClose }) {
                     </div>
                   )}
 
-                  {/* Server Processing Progress Bar */}
-                  {isProcessing && (
-                    <div className="space-y-3 bg-purple-950/60 border border-purple-500/40 p-4 rounded-xl">
-                      <div className="flex items-center justify-between text-sm text-purple-200">
-                        <span className="flex items-center gap-2 font-medium">
-                          <FiSettings className="w-4 h-4 animate-spin text-purple-400" />
-                          {processingMessage || "جاري معالجة وتقليص الفيديو..."}
-                        </span>
-                        <span className="font-bold text-emerald-400 text-base">{processingProgress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-700 rounded-full h-3.5 overflow-hidden border border-purple-500/20">
-                        <div
-                          className="bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500 relative overflow-hidden"
-                          style={{ width: `${processingProgress}%` }}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"></div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-purple-300/80">
-                        <span className="flex items-center gap-1">
-                          <FiClock className="w-3.5 h-3.5 text-purple-400" />
-                          يتم الضغط والتشفير في الخلفية لضمان سرعة التشغيل
-                        </span>
-                        <span className="text-amber-300 font-semibold animate-pulse">⚙️ معالجة نشطة</span>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Upload Button */}
-                  {!isUploading && !isProcessing && (
+                  {!isUploading && (
                     <button
                       onClick={handleUpload}
                       disabled={isDeleting}
