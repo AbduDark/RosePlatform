@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage as StorageBase;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 
 class Lesson extends Model
 {
@@ -124,11 +125,18 @@ class Lesson extends Model
             $params['_t'] = $userToken;
         }
 
-        return URL::temporarySignedRoute(
+        $url = URL::temporarySignedRoute(
             'lesson.video.stream',
             now()->addMinutes($expiresInMinutes),
             $params
         );
+
+        Log::info('GENERATED_STREAM_URL', [
+            'lesson_id' => $this->id,
+            'url'       => $url,
+        ]);
+
+        return $url;
     }
 
     /**

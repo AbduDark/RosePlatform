@@ -192,7 +192,19 @@ public function upload(Request $request, $lessonId)
             ]);
 
             // ─── Step 1: Validate signed URL (mandatory for everyone) ────────────
-            if (!$request->hasValidSignature(false)) {
+            // NOTE: URL::temporarySignedRoute() generates an *absolute* signed URL,
+            // so we must call hasValidSignature() with no args (absolute = true).
+            // Passing false would validate a *relative* signature and will always fail.
+            Log::info('STREAM_VIDEO_SIGNATURE_CHECK', [
+                'request_full_url'    => $request->fullUrl(),
+                'app_url'             => config('app.url'),
+                'signature_param'     => $request->query('signature'),
+                'expires_param'       => $request->query('expires'),
+                'has_valid_absolute'  => $request->hasValidSignature(),
+                'has_valid_relative'  => $request->hasValidSignature(false),
+            ]);
+
+            if (!$request->hasValidSignature()) {
                 Log::warning('STREAM_VIDEO_INVALID_SIGNATURE', [
                     'lesson_id' => $lesson->id,
                     'full_url' => $request->fullUrl(),
