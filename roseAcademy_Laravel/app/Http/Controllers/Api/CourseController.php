@@ -120,25 +120,14 @@ class CourseController extends BaseController
                 ], 404);
             }
 
-            $course->load(['lessons' => function($query) use ($user, $course) {
-                $query->orderBy('order');
-
-                if ($user) {
-                    if ($user->isSubscribedTo($course->id)) {
-                        $query->where(function($q) use ($user) {
-                            $q->where('target_gender', 'both')
-                              ->orWhere('target_gender', $user->gender);
-                        });
-                    } else {
-                        $query->where('is_free', true)
-                              ->where(function($q) use ($user) {
-                                  $q->where('target_gender', 'both')
-                                    ->orWhere('target_gender', $user->gender);
-                              });
-                    }
-                } else {
-                    $query->where('is_free', true)
-                          ->where('target_gender', 'both');
+            $course->load(['lessons' => function($query) use ($user) {
+                $query->orderBy('order', 'asc');
+                if ($user && !empty($user->gender) && !$user->isAdminAny()) {
+                    $query->where(function($q) use ($user) {
+                        $q->where('target_gender', 'both')
+                          ->orWhere('target_gender', $user->gender)
+                          ->orWhereNull('target_gender');
+                    });
                 }
             }]);
 

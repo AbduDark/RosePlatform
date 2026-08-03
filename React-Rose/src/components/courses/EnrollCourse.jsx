@@ -346,17 +346,29 @@ function EnrollCourse() {
             </button>
           )}
 
-          {!subscriptionStatus?.subscription?.is_active ? (
+          {subscriptionStatus?.is_active || subscriptionStatus?.subscription?.is_active ? (
             <button
-              onClick={() => setShowSubscriptionForm(!showSubscriptionForm)}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 px-6 rounded-lg flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl font-semibold text-lg"
+              onClick={() => navigate(`/courses/${courseId}/lessons`)}
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-4 px-6 rounded-lg flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl font-semibold text-lg cursor-pointer"
             >
               <FaGraduationCap
                 className={`${i18next.language === "ar" ? "ml-2" : "mr-2"} text-xl`}
               />
-              {showSubscriptionForm ? t("enrollCourse.cancel") : "اشترك الآن"}
+              {t("enrollCourse.startLearning", "ابدأ التعلم الآن")}
             </button>
-          ) : null}
+          ) : (
+            !showSubscriptionForm && (
+              <button
+                onClick={() => setShowSubscriptionForm(true)}
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 px-6 rounded-lg flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl font-semibold text-lg cursor-pointer"
+              >
+                <FaGraduationCap
+                  className={`${i18next.language === "ar" ? "ml-2" : "mr-2"} text-xl`}
+                />
+                {"اشترك الآن"}
+              </button>
+            )
+          )}
         </div>
       </div>
 

@@ -48,22 +48,19 @@ class LessonResource extends JsonResource
         ];
     }
 
-    /**
-     * تحديد ما إذا كان المستخدم يمكنه الوصول للدرس
-     */
     private function canUserAccess(?object $user): bool
     {
+        // الدروس المجانية متاحة للجميع (سواء مسجل أو زائر)
+        if ($this->is_free) {
+            return true;
+        }
+
         if (!$user) {
             return false;
         }
 
         // المديرين يمكنهم الوصول لكل شيء
         if ($user->isAdminAny()) {
-            return true;
-        }
-
-        // الدروس المجانية متاحة للجميع
-        if ($this->is_free) {
             return true;
         }
 

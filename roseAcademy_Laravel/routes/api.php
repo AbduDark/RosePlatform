@@ -42,11 +42,8 @@ Route::get('/health', fn() => response()->json(['status' => 'OK', 'timestamp' =>
         Route::post('register',        [AuthController::class, 'register']);
         Route::post('login',           [AuthController::class, 'login'])->name('login');
         Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::get('verify-email',     [AuthController::class, 'verifyEmail']);
         Route::post('reset-password',  [AuthController::class, 'resetPassword']);
         Route::post('force-logout',    [AuthController::class, 'forceLogout']);
-        Route::post('resend-pin',      [AuthController::class, 'resendPin']);
-        // Route::get('avatars/{filename}', [UserController::class, 'getAvatar']);
     });
 
 // Payment proof route - accessible for admins only
@@ -54,14 +51,18 @@ Route::middleware(['auth:sanctum', AdminMiddleware::class])->group(function () {
     Route::get('payment-proofs/{filename}', [SubscriptionController::class, 'getPaymentProof']);
 });
 
-Route::get('courses',                  [CourseController::class, 'index']);
-Route::get('courses/{id}',             [CourseController::class, 'show']);
-Route::get('courses/{id}/ratings',     [RatingController::class, 'index']);
+// Public Course & Lesson Routes (Guests can view courses, curriculum, and free lessons!)
+Route::get('courses',                          [CourseController::class, 'index']);
+Route::get('courses/{id}',                     [CourseController::class, 'show']);
+Route::get('courses/{id}/lessons',             [LessonController::class, 'index']);
+Route::get('lessons/{id}',                     [LessonController::class, 'show']);
+Route::get('lessons/{lessonId}/comments',      [CommentController::class, 'getLessonComments']);
+Route::get('courses/{id}/ratings',             [RatingController::class, 'index']);
 
 // Pagination routes for all models
-Route::get('subscriptions',            [SubscriptionController::class, 'index']);
-Route::get('lessons',                  [LessonController::class, 'publicIndex']);
-Route::get('users',                    [UserController::class, 'index']);
+Route::get('subscriptions',                    [SubscriptionController::class, 'index']);
+Route::get('lessons',                          [LessonController::class, 'publicIndex']);
+Route::get('users',                            [UserController::class, 'index']);
 
 /*
 |--------------------------------------------------------------------------
@@ -71,12 +72,10 @@ Route::get('users',                    [UserController::class, 'index']);
 Route::middleware(['auth:sanctum'])->group(function () {
     // Authentication
     Route::prefix('auth')->group(function () {
-        Route::get('profile',   [AuthController::class, 'profile']);
-        Route::put('update',   [AuthController::class, 'update']);
+        Route::get('profile',          [AuthController::class, 'profile']);
+        Route::put('update',           [AuthController::class, 'update']);
         Route::put('password',         [AuthController::class, 'changePassword']);
-        Route::patch('profile', [AuthController::class, 'updateProfile']);
-        Route::post('refresh',  [AuthController::class, 'refresh']);
-        Route::post('logout',   [AuthController::class, 'logout']);
+        Route::post('logout',          [AuthController::class, 'logout']);
     });
 
     // Subscriptions
@@ -95,22 +94,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('notifications/mark-all-read',          [NotificationController::class, 'markAllAsRead']);
     Route::delete('notifications/{id}',                [NotificationController::class, 'destroy']);
 
-    // Comments
+    // Comments (Create, Reply, Update, Like, Delete)
     Route::post('comments',                            [CommentController::class, 'store']);
-    Route::get('my-comments',                          [CommentController::class, 'getUserComments']);
+    Route::put('comments/{id}',                        [CommentController::class, 'update']);
     Route::delete('comments/{id}',                     [CommentController::class, 'destroy']);
-    Route::get('lessons/{lessonId}/comments',          [CommentController::class, 'getLessonComments']);
+    Route::post('comments/{id}/like',                  [CommentController::class, 'toggleLike']);
+    Route::get('my-comments',                          [CommentController::class, 'getUserComments']);
 
     // Favorites
     Route::post('favorite/{course_id}',                [FavoriteController::class, 'add']);
     Route::delete('favorite/{course_id}',              [FavoriteController::class, 'remove']);
     Route::get('favorite-subscriptions',               [FavoriteController::class, 'getFavoriteSubscriptions']);
 
-    // Lessons
-    Route::get('courses/{id}/lessons',                 [LessonController::class, 'index']);
-    Route::get('lessons/{id}',                         [LessonController::class, 'show']);
-    Route::get('/lessons/{lesson}/stream',              [LessonVideoController::class, 'stream']);
-    Route::get('/lessons/{lesson}/status',              [LessonVideoController::class, 'getProcessingStatus'])->name('lesson.video.status');
+    // Lessons streaming & progress
+    Route::post('lessons/{id}/progress',               [LessonController::class, 'updateProgress']);
+    Route::post('lessons/{id}/complete',               [LessonController::class, 'markCompleted']);
+    Route::get('/lessons/{lesson}/stream',             [LessonVideoController::class, 'stream']);
+    Route::get('/lessons/{lesson}/status',             [LessonVideoController::class, 'getProcessingStatus'])->name('lesson.video.status');
 
     // Ratings
     Route::post('ratings',                             [RatingController::class, 'store']);

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { register } from "../../api/auth";
+import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import studyImage from "../../assets/images/study.svg";
 
 function Register() {
+  const { setAuthData } = useAuth();
   const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
@@ -127,8 +129,13 @@ function Register() {
     }
 
     try {
-      await register(formData);
-      setSuccess(true);
+      const res = await register(formData);
+      const payload = res?.data || res;
+      if (payload?.user && payload?.token) {
+        setAuthData(payload.user, payload.token, "/");
+      } else {
+        setSuccess(true);
+      }
       setLoading(false);
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");

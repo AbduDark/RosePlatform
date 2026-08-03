@@ -52,53 +52,8 @@ function CardCourse() {
     fetchFavorites();
   }, [token]);
 
-  const handleCourseClick = async (courseId) => {
-    if (!user) {
-      navigate(`/courses/${courseId}`);
-      return;
-    }
-
-    if (user.role !== "student") {
-      navigate(`/courses/${courseId}`);
-      return;
-    }
-
-    try {
-      const currentLang = i18next.language || 'ar';
-      const response = await getMySubscriptions(token, currentLang);
-      
-      const subscriptions = response?.data?.subscriptions || response?.subscriptions || [];
-      const courseSubscription = subscriptions.find(sub => sub.course_id === courseId);
-
-      if (!courseSubscription) {
-        navigate(`/courses/${courseId}`);
-        return;
-      }
-
-      const actualStatus = courseSubscription.status;
-      const isExpired = courseSubscription.is_expired;
-
-      if (actualStatus === "pending") {
-        setSelectedCourseId(courseId);
-        setModalStatus("pending");
-        setModalOpen(true);
-      } else if (actualStatus === "rejected") {
-        setSelectedCourseId(courseId);
-        setModalStatus("rejected");
-        setModalOpen(true);
-      } else if (isExpired || actualStatus === "expired") {
-        setSelectedCourseId(courseId);
-        setModalStatus("expired");
-        setModalOpen(true);
-      } else if (actualStatus === "approved" && !isExpired) {
-        navigate(`/courses/${courseId}/lessons`);
-      } else {
-        navigate(`/courses/${courseId}`);
-      }
-    } catch (error) {
-      console.error("Error checking subscription status:", error);
-      navigate(`/courses/${courseId}`);
-    }
+  const handleCourseClick = (courseId) => {
+    navigate(`/courses/${courseId}`);
   };
 
   const handleOpenRenewModal = async () => {

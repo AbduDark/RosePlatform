@@ -129,13 +129,11 @@ function AnimatedRoutes() {
         <Route
           path="/courses/:courseId/lessons/:lessonId?"
           element={
-            <PrivateRoute>
-              <Layout>
-                <PageTransition>
-                  <LessonPage />
-                </PageTransition>
-              </Layout>
-            </PrivateRoute>
+            <Layout>
+              <PageTransition>
+                <LessonPage />
+              </PageTransition>
+            </Layout>
           }
         />
         <Route

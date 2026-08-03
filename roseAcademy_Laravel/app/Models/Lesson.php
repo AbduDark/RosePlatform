@@ -265,17 +265,26 @@ public function getVideoStreamUrl(?string $token = null): string
         return rmdir($dir);
     }
 
+    public function progress()
+    {
+        return $this->hasMany(LessonProgress::class);
+    }
+
     /**
      * Get can_access attribute
      */
     public function getCanAccessAttribute(): bool
     {
-        $user = auth()->user();
+        if ($this->is_free) {
+            return true;
+        }
+
+        $user = auth('sanctum')->user() ?? auth()->user();
         if (!$user) {
             return false;
         }
 
-        if ($this->is_free || $user->isAdmin()) {
+        if ($user->isAdminAny()) {
             return true;
         }
 

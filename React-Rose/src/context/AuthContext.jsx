@@ -113,11 +113,22 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token, navigate]);
 
+  const setAuthData = (currentUser, userToken, redirectPath = "/") => {
+    setUser(currentUser);
+    setToken(userToken);
+    localStorage.setItem("user", JSON.stringify(currentUser));
+    if (userToken) {
+      localStorage.setItem("token", userToken);
+    }
+    navigate(redirectPath);
+  };
+
   const value = {
     user,
     token,
     login: handleLogin,
     logout: handleLogout,
+    setAuthData,
     sessionExpired,
   };
 

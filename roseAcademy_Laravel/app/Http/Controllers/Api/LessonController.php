@@ -349,55 +349,128 @@ class LessonController extends Controller
     public function show($id)
     {
         try {
-            /** @var User $user */
-            $user = auth()->user();
+            /** @var User|null $user */
+            $user = auth('sanctum')->user() ?? auth()->user();
 
-            if (!$user) {
-                return $this->errorResponse('يجب تسجيل الدخول أولاً', 401);
-            }
-
-            $lesson = Lesson::with(['course', 'comments.user'])->find($id);
+            $lesson = Lesson::with(['course'])->find($id);
 
             if (!$lesson) {
                 return $this->errorResponse('الدرس غير موجود', 404);
             }
 
-            // التحقق من توافق الجنس
-            if ($lesson->target_gender !== 'both' && $lesson->target_gender !== $user->gender) {
-    return $this->errorResponse([
-        'ar' => 'هذا الدرس غير متاح لجنسك',
-        'en' => 'This lesson is not available for your gender'
-    ], 403);
-}
+            if (!$lesson->course->is_active) {
+                return $this->errorResponse([
+                    'ar' => 'هذه الدورة غير نشطة',
+                    'en' => 'This course is not active'
+                ], 403);
+            }
 
-if (!$lesson->course->is_active) {
-    return $this->errorResponse([
-        'ar' => 'هذه الدورة غير نشطة',
-        'en' => 'This course is not active'
-    ], 403);
-}
-
-            // التحقق من الاشتراك إذا لم يكن الدرس مجاني
-            $canAccess = $lesson->is_free || $user->canAccessCourse($lesson->course_id);
+            // Visitor/Guest access: free lessons are allowed for everyone
+            $canAccess = $lesson->is_free;
+            if ($user) {
+                if ($user->isAdminAny() || $user->isSubscribedTo($lesson->course_id)) {
+                    $canAccess = true;
+                }
+            }
 
             if (!$canAccess) {
                 return $this->subscriptionRequiredResponse();
             }
 
-            // إضافة معلومات الوصول للفيديو
-            if ($lesson->has_video && $canAccess) {
-                $lesson->video_url = $lesson->getVideoDirectUrl();
+            $lesson->can_access = true;
+
+            // Video information
+            if ($lesson->has_video) {
+                if ($lesson->video_source === 'youtube') {
+                    $lesson->embed_url = $lesson->getSecureYouTubeEmbedUrl();
+                } else {
+                    $lesson->video_url = $lesson->getVideoDirectUrl();
+                }
                 $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                 $lesson->video_size_formatted = $lesson->getFormattedSize();
                 $lesson->video_status_message = $lesson->getVideoStatusMessage();
-            } else {
-                $lesson->video_url = null;
+            }
+
+            // Include user progress if authenticated
+            if ($user) {
+                $progress = \App\Models\LessonProgress::where('user_id', $user->id)
+                    ->where('lesson_id', $lesson->id)
+                    ->first();
+
+                $lesson->progress = [
+                    'is_completed'          => $progress ? (bool) $progress->is_completed : false,
+                    'last_position_seconds' => $progress ? (int) $progress->last_position_seconds : 0,
+                ];
             }
 
             return $this->successResponse($lesson, 'تم جلب الدرس بنجاح');
 
         } catch (\Exception $e) {
             Log::error('Error retrieving lesson: ' . $e->getMessage());
+            return $this->serverErrorResponse();
+        }
+    }
+
+    /**
+     * Update video watch progress (resume playback position)
+     */
+    public function updateProgress(Request $request, $id)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return $this->unauthorizedResponse();
+            }
+
+            $lesson = Lesson::findOrFail($id);
+            $position = (int) $request->input('last_position_seconds', 0);
+
+            $progress = \App\Models\LessonProgress::updateOrCreate(
+                [
+                    'user_id'   => $user->id,
+                    'lesson_id' => $lesson->id,
+                ],
+                [
+                    'course_id'             => $lesson->course_id,
+                    'last_position_seconds' => $position,
+                ]
+            );
+
+            return $this->successResponse($progress, 'تم تحديث تقدم المشاهدة');
+        } catch (\Exception $e) {
+            Log::error('Error updating lesson progress: ' . $e->getMessage());
+            return $this->serverErrorResponse();
+        }
+    }
+
+    /**
+     * Mark lesson as completed
+     */
+    public function markCompleted(Request $request, $id)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return $this->unauthorizedResponse();
+            }
+
+            $lesson = Lesson::findOrFail($id);
+
+            $progress = \App\Models\LessonProgress::updateOrCreate(
+                [
+                    'user_id'   => $user->id,
+                    'lesson_id' => $lesson->id,
+                ],
+                [
+                    'course_id'    => $lesson->course_id,
+                    'is_completed' => true,
+                    'completed_at' => now(),
+                ]
+            );
+
+            return $this->successResponse($progress, 'تم إكمال الدرس بنجاح');
+        } catch (\Exception $e) {
+            Log::error('Error marking lesson complete: ' . $e->getMessage());
             return $this->serverErrorResponse();
         }
     }
@@ -415,18 +488,18 @@ if (!$lesson->course->is_active) {
             $lesson = Lesson::findOrFail($id);
 
             $videoInfo = [
-                'lesson_id' => $lesson->id,
-                'has_video' => $lesson->hasVideo(),
-                'video_status' => $lesson->video_status,
-                'video_path' => $lesson->video_path,
-                'video_duration' => $lesson->video_duration,
-                'video_size' => $lesson->video_size,
+                'lesson_id'                => $lesson->id,
+                'has_video'                => $lesson->hasVideo(),
+                'video_status'             => $lesson->video_status,
+                'video_path'               => $lesson->video_path,
+                'video_duration'           => $lesson->video_duration,
+                'video_size'               => $lesson->video_size,
                 'video_duration_formatted' => $lesson->getFormattedDuration(),
-                'video_size_formatted' => $lesson->getFormattedSize(),
-                'is_video_protected' => $lesson->is_video_protected,
-                'video_file_exists' => $lesson->videoFileExists(),
-                'video_metadata' => $lesson->video_metadata,
-                'video_status_message' => $lesson->getVideoStatusMessage(),
+                'video_size_formatted'     => $lesson->getFormattedSize(),
+                'is_video_protected'       => $lesson->is_video_protected,
+                'video_file_exists'        => $lesson->videoFileExists(),
+                'video_metadata'           => $lesson->video_metadata,
+                'video_status_message'     => $lesson->getVideoStatusMessage(),
             ];
 
             return $this->successResponse($videoInfo, 'تم جلب معلومات الفيديو بنجاح');
