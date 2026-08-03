@@ -336,6 +336,9 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd, qualitySou
           </div>
         </div>
       </div>
+    );
+  }
+
   return (
     <div ref={containerRef} className="relative w-full video-container">
 
