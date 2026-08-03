@@ -125,7 +125,7 @@ class Lesson extends Model
             $params['_t'] = $userToken;
         }
 
-        if ($this->video_path && str_contains($this->video_path, '.m3u8')) {
+        if ($this->video_source !== 'youtube') {
             $params['file'] = 'playlist.m3u8';
         }
 

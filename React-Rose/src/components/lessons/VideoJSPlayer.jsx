@@ -133,7 +133,7 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
       setIsLoading(false);
       setError(
         video.error?.message ||
-          t("lessons.videoPlayer.loadError", "فشل تحميل الفيديو. يرجى إعادة محاولة التحميل.")
+        t("lessons.videoPlayer.loadError", "فشل تحميل الفيديو. يرجى إعادة محاولة التحميل.")
       );
     };
 
@@ -326,9 +326,8 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
 
       {/* Custom Control Bar */}
       <div
-        className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 z-30 transition-opacity duration-300 ${
-          showControls || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 z-30 transition-opacity duration-300 ${showControls || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
       >
         {/* Progress Seek Bar */}
         <div className="relative w-full mb-3 group/timeline cursor-pointer">
@@ -408,9 +407,8 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
                     <button
                       key={rate}
                       onClick={() => handleRateChange(rate)}
-                      className={`w-full text-right px-3 py-1.5 hover:bg-purple-600/30 transition-colors flex items-center justify-between ${
-                        playbackRate === rate ? "text-purple-400 font-bold bg-purple-500/10" : "text-slate-300"
-                      }`}
+                      className={`w-full text-right px-3 py-1.5 hover:bg-purple-600/30 transition-colors flex items-center justify-between ${playbackRate === rate ? "text-purple-400 font-bold bg-purple-500/10" : "text-slate-300"
+                        }`}
                     >
                       <span>{rate}x</span>
                       {playbackRate === rate && <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />}

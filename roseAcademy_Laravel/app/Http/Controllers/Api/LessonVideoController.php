@@ -293,10 +293,15 @@ public function upload(Request $request, $lessonId)
                 $targetFilename = basename($file);
                 $videoPath = storage_path("app/hls/lesson_{$lesson->id}/{$targetFilename}");
                 if (!file_exists($videoPath)) {
+                    $this->ensureHlsPlaylist($lesson);
+                    $videoPath = storage_path("app/hls/lesson_{$lesson->id}/{$targetFilename}");
+                }
+                if (!file_exists($videoPath)) {
                     $videoPath = storage_path('app/' . dirname($lesson->video_path) . '/' . $targetFilename);
                 }
             } else {
-                $videoPath = storage_path('app/' . $lesson->video_path);
+                $hlsPlaylist = $this->ensureHlsPlaylist($lesson);
+                $videoPath = $hlsPlaylist ?: storage_path('app/' . $lesson->video_path);
                 if (!file_exists($videoPath)) {
                     $videoPath = storage_path('app/public/' . $lesson->video_path);
                 }
@@ -864,6 +869,59 @@ public function upload(Request $request, $lessonId)
             'Cache-Control'       => 'private, max-age=3600',
             'X-Accel-Buffering'   => 'no',
         ]);
+    }
+
+    /**
+     * Ensure HLS playlist exists for the lesson.
+     * If the lesson is still an MP4 file, fast-remux it to HLS on demand.
+     */
+    private function ensureHlsPlaylist(Lesson $lesson): ?string
+    {
+        $hlsDir = storage_path("app/hls/lesson_{$lesson->id}");
+        $playlistPath = $hlsDir . '/playlist.m3u8';
+
+        if (file_exists($playlistPath) && filesize($playlistPath) > 0) {
+            return $playlistPath;
+        }
+
+        // Locate source video file
+        $sourcePath = storage_path('app/' . $lesson->video_path);
+        if (!file_exists($sourcePath)) {
+            $sourcePath = storage_path('app/public/' . $lesson->video_path);
+        }
+
+        if (!file_exists($sourcePath) || filesize($sourcePath) == 0) {
+            return null;
+        }
+
+        if (!is_dir($hlsDir)) {
+            @mkdir($hlsDir, 0755, true);
+        }
+
+        $segmentPattern = $hlsDir . '/segment_%03d.ts';
+
+        if (function_exists('exec')) {
+            Log::info("⚡ Fast HLS remuxing for lesson {$lesson->id}...");
+            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -codec:v copy -codec:a copy -hls_time 6 -hls_playlist_type vod -hls_segment_filename " . escapeshellarg($segmentPattern) . " " . escapeshellarg($playlistPath) . " 2>&1";
+            
+            $output = [];
+            $returnVar = -1;
+            exec($command, $output, $returnVar);
+
+            if ($returnVar === 0 && file_exists($playlistPath) && filesize($playlistPath) > 0) {
+                $relativePath = "hls/lesson_{$lesson->id}/playlist.m3u8";
+                $lesson->update([
+                    'video_path'   => $relativePath,
+                    'video_status' => 'ready',
+                ]);
+                Log::info("✅ Fast HLS remuxing completed for lesson {$lesson->id}");
+                return $playlistPath;
+            } else {
+                Log::warning("⚠️ Fast HLS remuxing failed for lesson {$lesson->id}: " . implode("\n", array_slice($output, -3)));
+            }
+        }
+
+        return null;
     }
 }
 
