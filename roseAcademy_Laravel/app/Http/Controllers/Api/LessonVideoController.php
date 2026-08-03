@@ -772,31 +772,6 @@ public function upload(Request $request, $lessonId)
      */
     private function streamVideoFile(Request $request, string $videoPath, Lesson $lesson)
     {
-        $fileSize = filesize($videoPath);
-        $ext = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
-
-        $mimeTypes = [
-            'mp4'  => 'video/mp4',
-            'webm' => 'video/webm',
-            'mov'  => 'video/quicktime',
-            'avi'  => 'video/x-msvideo',
-            'mkv'  => 'video/x-matroska',
-            'm4v'  => 'video/mp4',
-            'ogv'  => 'video/ogg',
-        ];
-        $mimeType = $mimeTypes[$ext] ?? 'video/mp4';
-
-        // Common headers for every response (CORS + security)
-        $origin = $request->header('Origin') ?: 'https://rose-academy.com';
-        $baseHeaders = [
-            'Content-Type'                  => $mimeType,
-            'Content-Disposition'           => 'inline',
-            'Accept-Ranges'                 => 'bytes',
-            'Access-Control-Allow-Origin'   => $origin,
-            'Access-Control-Allow-Methods'  => 'GET, HEAD, OPTIONS',
-            'Access-Control-Allow-Headers'  => 'Range, Authorization, Content-Type, Origin, Accept',
-            'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges, Content-Type',
-            'Access-Control-Allow-Credentials' => 'true',
     /**
      * Stream a video file with proper HTTP Range (byte-range) support.
      *
