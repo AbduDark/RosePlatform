@@ -7,27 +7,27 @@ services:
       - ./roseAcademy_Laravel:/var/www/html
       - backend_vendor:/var/www/html/vendor
     environment: &laravel-env
-      APP_NAME: Rose Academy
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: https://api.rose-academy.com
-      FRONTEND_URL: https://rose-academy.com
-      SANCTUM_STATEFUL_DOMAINS: rose-academy.com,www.rose-academy.com
-      SESSION_DOMAIN: .rose-academy.com
-      SESSION_SECURE_COOKIE: "true"
+      APP_NAME: "${APP_NAME:-Rose Academy}"
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_URL: "${APP_URL:-https://api.rose-academy.com}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://rose-academy.com}"
+      SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-rose-academy.com,www.rose-academy.com}"
+      SESSION_DOMAIN: "${SESSION_DOMAIN:-.rose-academy.com}"
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-true}"
       LOG_CHANNEL: stderr
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: rose_academy
-      DB_USERNAME: rose
-      DB_PASSWORD: rose_password
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      REDIS_CLIENT: predis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      DB_CONNECTION: "${DB_CONNECTION:-mysql}"
+      DB_HOST: "${DB_HOST:-mysql}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_DATABASE: "${DB_DATABASE:-rose_academy_db}"
+      DB_USERNAME: "${DB_USERNAME:-rose_user}"
+      DB_PASSWORD: "${DB_PASSWORD:-Rose@SecurePass2026!DB}"
+      CACHE_STORE: "${CACHE_STORE:-redis}"
+      SESSION_DRIVER: "${SESSION_DRIVER:-redis}"
+      QUEUE_CONNECTION: "${QUEUE_CONNECTION:-redis}"
+      REDIS_CLIENT: "${REDIS_CLIENT:-predis}"
+      REDIS_HOST: "${REDIS_HOST:-redis}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
       context: .
       dockerfile: docker/nginx/Dockerfile
       args:
-        VITE_API_BASE: https://api.rose-academy.com/api
+        VITE_API_BASE: "${VITE_API_BASE:-https://api.rose-academy.com/api}"
     ports:
       - "80:80"
       - "443:443"
@@ -78,16 +78,16 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: rose_academy
-      MYSQL_USER: rose
-      MYSQL_PASSWORD: rose_password
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: "${DB_DATABASE:-rose_academy_db}"
+      MYSQL_USER: "${DB_USERNAME:-rose_user}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-Rose@SecurePass2026!DB}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-Rose@RootSecure2026!Pass}"
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-Rose@RootSecure2026!Pass}"]
       interval: 5s
       timeout: 5s
       retries: 20
