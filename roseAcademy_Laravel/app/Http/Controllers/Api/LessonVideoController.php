@@ -118,7 +118,7 @@ public function upload(Request $request, $lessonId)
                 'status' => 'processing',
                 'upload_progress' => 100,
                 'message' => 'تم رفع الفيديو وجاري المعالجة والضغط في الخلفية',
-                'video_stream_url' => $lesson->getVideoStreamUrl(),
+                'video_stream_url' => $lesson->getSignedStreamUrl(240, $request->bearerToken()),
                 'status_url' => route('lesson.video.status', ['lesson' => $lesson->id])
             ], 'تم رفع الفيديو وجاري الضغط والمعالجة');
 
@@ -396,7 +396,7 @@ public function upload(Request $request, $lessonId)
                 // إضافة رابط البث للمستخدمين المخولين
                 $user = $request->user();
                 if ($user && $this->canAccessLesson($user, $lesson)) {
-                    $response['stream_url'] = $lesson->getVideoStreamUrl();
+                    $response['stream_url'] = $lesson->getSignedStreamUrl(240, $request->bearerToken());
                 }
             }
 
@@ -483,7 +483,7 @@ public function upload(Request $request, $lessonId)
             return $this->successResponse([
                 'token' => $token,
                 'expires_at' => $lesson->video_token_expires_at,
-                'stream_url' => $lesson->getVideoStreamUrl(),
+                'stream_url' => $lesson->getSignedStreamUrl(240, $request->bearerToken()),
             ], 'تم تجديد رمز الوصول بنجاح');
 
         } catch (\Exception $e) {
