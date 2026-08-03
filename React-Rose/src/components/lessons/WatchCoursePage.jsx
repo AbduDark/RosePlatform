@@ -62,17 +62,24 @@ const WatchCoursePage = () => {
       // 1. Fetch lessons & course state from lessons endpoint
       const response = await getLessonsByCourse(courseId, token);
       
-      console.log("Raw API response:", response);
-      
-      const payload = response?.data || response || {};
-      console.log("Extracted payload:", payload);
-      console.log("Lessons array:", payload.lessons);
+      // Unwraps data safely whether response is direct, wrapped in .data, or double wrapped (.data.data)
+      let rawData = response;
+      if (rawData?.data?.lessons) {
+        rawData = rawData.data;
+      } else if (rawData?.data?.data?.lessons) {
+        rawData = rawData.data.data;
+      } else if (rawData?.data && typeof rawData.data === "object") {
+        rawData = rawData.data;
+      }
+
+      console.log("Extracted payload rawData:", rawData);
+      console.log("Lessons array:", rawData?.lessons);
       console.log("User info:", { gender: user?.gender, isAdmin });
       
-      const fetchedLessons = payload.lessons || [];
-      const fetchedCourse = payload.course || null;
-      const isSubscribed = Boolean(payload.user_subscribed || isAdmin);
-      const subInfo = payload.subscription_info || null;
+      const fetchedLessons = rawData?.lessons || [];
+      const fetchedCourse = rawData?.course || null;
+      const isSubscribed = Boolean(rawData?.user_subscribed || isAdmin);
+      const subInfo = rawData?.subscription_info || null;
 
       setLessons(fetchedLessons);
       setUserSubscribed(isSubscribed);
