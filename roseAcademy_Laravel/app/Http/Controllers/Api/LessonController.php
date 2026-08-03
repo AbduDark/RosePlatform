@@ -173,12 +173,15 @@ class LessonController extends Controller
             ]);
 
             // تحديد إمكانية الوصول ورابط الفيديو لكل درس
-            $lessons->each(function ($lesson) use ($user, $isAdmin, $isSubscribed) {
+            $rawToken = $request->bearerToken();
+            $lessons->each(function ($lesson) use ($user, $isAdmin, $isSubscribed, $rawToken) {
                 $canAccess = $isAdmin || $lesson->is_free || $isSubscribed;
                 $lesson->can_access = $canAccess;
 
-                if ($canAccess && $lesson->has_video) {
-                    $lesson->video_url = ($lesson->video_source === 'youtube') ? null : $lesson->getSignedStreamUrl();
+                $videoStatus = $lesson->video_status ?? ($lesson->has_video ? 'ready' : null);
+
+                if ($canAccess && $lesson->has_video && ($videoStatus === 'ready' || empty($lesson->video_status))) {
+                    $lesson->video_url = ($lesson->video_source === 'youtube') ? null : $lesson->getSignedStreamUrl(240, $rawToken);
                     $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                     $lesson->video_size_formatted = $lesson->getFormattedSize();
                 } else {
@@ -381,10 +384,14 @@ class LessonController extends Controller
 
             // Video information
             if ($lesson->has_video) {
+                $videoStatus = $lesson->video_status ?? 'ready';
                 if ($lesson->video_source === 'youtube') {
                     $lesson->embed_url = $lesson->getSecureYouTubeEmbedUrl();
+                } else if ($videoStatus === 'ready' || empty($lesson->video_status)) {
+                    $rawToken = $request->bearerToken();
+                    $lesson->video_url = $lesson->getSignedStreamUrl(240, $rawToken);
                 } else {
-                    $lesson->video_url = $lesson->getSignedStreamUrl();
+                    $lesson->video_url = null;
                 }
                 $lesson->video_duration_formatted = $lesson->getFormattedDuration();
                 $lesson->video_size_formatted = $lesson->getFormattedSize();

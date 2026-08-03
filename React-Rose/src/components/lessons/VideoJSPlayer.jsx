@@ -82,6 +82,12 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd, qualitySou
           responsive: true,
           fluid: true,
           preload: "auto",
+          sources: [
+            {
+              src: videoUrl,
+              type: "video/mp4",
+            },
+          ],
           playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
           controlBar: {
             children: [
@@ -108,6 +114,7 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd, qualitySou
 
         player.ready(() => {
           console.log("Video player is ready for lesson:", lessonId);
+          player.src({ src: videoUrl, type: "video/mp4" });
           setIsReady(true);
           setError(null);
 
