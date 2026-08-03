@@ -5,14 +5,13 @@ import {
   FaChevronRight,
   FaList,
   FaBookOpen,
-  FaComment,
+  FaCommentDots,
   FaLock,
   FaInfoCircle,
   FaRedo,
   FaGraduationCap,
   FaClock,
   FaCheckCircle,
-  FaShieldAlt,
   FaUserGraduate,
   FaExternalLinkAlt,
 } from "react-icons/fa";
@@ -44,7 +43,6 @@ const WatchCoursePage = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "comments"
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Fetch course & lessons from API
@@ -61,8 +59,6 @@ const WatchCoursePage = () => {
     try {
       // 1. Fetch normalized lessons & course state from lessons API
       const normalizedData = await getLessonsByCourse(courseId, token);
-      
-      console.log("WatchCoursePage received normalizedData:", normalizedData);
 
       const fetchedLessons = normalizedData.lessons || [];
       const fetchedCourse = normalizedData.course || null;
@@ -87,7 +83,6 @@ const WatchCoursePage = () => {
 
       // Check if no lessons exist for this course
       if (fetchedLessons.length === 0) {
-        console.warn("No lessons found for course", courseId, "Normalized:", normalizedData);
         setError(t("lessons.sidebar.noEpisodes", "لا توجد حلقات متاحة لهذه الدورة"));
         setIsLoading(false);
         return;
@@ -208,15 +203,15 @@ const WatchCoursePage = () => {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-6">
         <div className="flex flex-col items-center gap-4 max-w-md text-center">
           <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-ping" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-indigo-500 border-b-transparent border-l-transparent animate-spin" />
-            <FaGraduationCap className="absolute inset-0 m-auto text-blue-400 text-xl" />
+            <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-secondary border-b-transparent border-l-transparent animate-spin" />
+            <FaGraduationCap className="absolute inset-0 m-auto text-primary text-xl" />
           </div>
           <h2 className="text-lg font-bold text-slate-200">
             {t("lessons.videoPlayer.loading", "جاري تحميل محتوى الدورة...")}
           </h2>
           <p className="text-xs text-slate-400">
-            يرجى الانتظار لحين تجهيز الدروس وم المشغل...
+            يرجى الانتظار لحين تجهيز المشغل والدروس...
           </p>
         </div>
       </div>
@@ -240,16 +235,16 @@ const WatchCoursePage = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={loadData}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-blue-500/20"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:opacity-90 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-primary/20 cursor-pointer"
             >
               <FaRedo className="text-xs" />
               {t("common.retry", "إعادة المحاولة")}
             </button>
             <button
-              onClick={() => navigate("/student-dashboard/subscriptions")}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-all border border-slate-700"
+              onClick={() => navigate(`/courses/${courseId}`)}
+              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
             >
-              {t("common.backToDashboard", "العودة للوحة التحكم")}
+              صفحة الكورس
             </button>
           </div>
         </div>
@@ -258,16 +253,16 @@ const WatchCoursePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
-      {/* Navbar / Top Bar */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-primary selection:text-white">
+      {/* Top Navigation Bar */}
       <header className="sticky top-0 z-40 bg-slate-900/90 border-b border-slate-800/80 backdrop-blur-md px-4 py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           {/* Back & Course info */}
           <div className="flex items-center gap-3 min-w-0">
             <button
-              onClick={() => navigate(-1)}
-              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-300 hover:text-white transition-all border border-slate-700/60 shadow-sm flex-shrink-0"
-              title={t("common.back", "رجوع")}
+              onClick={() => navigate(`/courses/${courseId}`)}
+              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-700/60 shadow-sm flex-shrink-0 cursor-pointer"
+              title={t("common.back", "رجوع للكورس")}
             >
               {isRtl ? (
                 <FaChevronRight className="text-sm" />
@@ -278,7 +273,7 @@ const WatchCoursePage = () => {
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider">
+                <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider">
                   دورة
                 </span>
                 <h1 className="text-sm sm:text-base font-bold text-white truncate">
@@ -287,7 +282,7 @@ const WatchCoursePage = () => {
               </div>
               {currentLesson && (
                 <p className="text-xs text-slate-400 truncate mt-0.5">
-                  <span className="text-blue-400 font-medium">
+                  <span className="text-primary font-medium">
                     الدرس {currentIndex + 1}:
                   </span>{" "}
                   {currentLesson.title}
@@ -308,7 +303,7 @@ const WatchCoursePage = () => {
             {/* Mobile Drawer Trigger */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="lg:hidden flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-all"
+              className="lg:hidden flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all cursor-pointer"
             >
               <FaList />
               <span>{t("lessons.sidebar.episodes", "الحلقات")}</span>
@@ -319,8 +314,8 @@ const WatchCoursePage = () => {
 
       {/* Main Workspace Layout */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Main Content Area: Player & Details */}
-        <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-5 gap-5 custom-scrollbar">
+        {/* Main Content Area: Player, Description & Comments */}
+        <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-5 gap-6 custom-scrollbar">
           {/* Player Container */}
           <div className="w-full bg-slate-900 rounded-2xl border border-slate-800/80 shadow-2xl overflow-hidden">
             {currentLesson ? (
@@ -392,7 +387,7 @@ const WatchCoursePage = () => {
                 <button
                   onClick={handlePreviousLesson}
                   disabled={!previousLesson}
-                  className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700/70 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800 text-xs font-semibold"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer"
                 >
                   {isRtl ? <FaChevronRight /> : <FaChevronLeft />}
                   <span className="hidden sm:inline">
@@ -412,7 +407,7 @@ const WatchCoursePage = () => {
                 <button
                   onClick={handleNextLesson}
                   disabled={!nextLesson}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transition-all shadow-lg shadow-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600 text-xs font-bold"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary hover:opacity-95 text-white transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
                 >
                   <span className="hidden sm:inline">
                     {nextLesson
@@ -426,136 +421,84 @@ const WatchCoursePage = () => {
             )}
           </div>
 
-          {/* Details & Tabs Section */}
-          <div className="bg-slate-900/90 rounded-2xl border border-slate-800/80 shadow-xl overflow-hidden backdrop-blur-md">
-            {/* Tabs Header */}
-            <div className="flex border-b border-slate-800 bg-slate-900/60 p-1.5 gap-2">
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === "overview"
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-                }`}
-              >
-                <FaBookOpen />
-                <span>تفاصيل الدرس والتفاعلات</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("comments")}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === "comments"
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-                }`}
-              >
-                <FaComment />
-                <span>الأسئلة والتعليقات</span>
-              </button>
-            </div>
-
-            {/* Tab Body */}
-            <div className="p-4 sm:p-6">
-              {activeTab === "overview" && (
-                <div className="space-y-6">
-                  {currentLesson ? (
-                    <>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold">
-                            الدرس #{currentIndex + 1}
-                          </span>
-                          {currentLesson.duration_minutes && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-xs font-medium">
-                              <FaClock className="text-slate-400 text-xs" />
-                              {currentLesson.duration_minutes} دقيقة
-                            </span>
-                          )}
-                          {currentLesson.is_free && (
-                            <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
-                              مجاني
-                            </span>
-                          )}
-                        </div>
-
-                        <h2 className="text-xl sm:text-2xl font-bold text-white">
-                          {currentLesson.title}
-                        </h2>
-                      </div>
-
-                      {/* Description Card */}
-                      {currentLesson.description && (
-                        <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-800 text-slate-300 text-xs sm:text-sm leading-relaxed">
-                          <h4 className="font-bold text-slate-200 mb-1 text-xs uppercase tracking-wider">
-                            الوصف المختصر:
-                          </h4>
-                          <p>{currentLesson.description}</p>
-                        </div>
-                      )}
-
-                      {/* Detailed Content Body */}
-                      {currentLesson.content && (
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-200 mb-2 uppercase tracking-wider">
-                            محتوى الدرس:
-                          </h3>
-                          <div className="prose prose-invert max-w-none text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-800/20 p-4 rounded-xl border border-slate-800/60 whitespace-pre-wrap">
-                            {currentLesson.content}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Course / Instructor info block */}
-                      {course && (
-                        <div className="mt-6 pt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800/40">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold">
-                              <FaUserGraduate />
-                            </div>
-                            <div>
-                              <h4 className="text-xs font-bold text-white">
-                                {course.instructor_name || "مدرس المساق"}
-                              </h4>
-                              <p className="text-[11px] text-slate-400">
-                                {course.title}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium border border-slate-700">
-                              <FaShieldAlt className="text-emerald-400" />
-                              حماية كاملة للمحتوى
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-6 text-slate-400 text-xs">
-                      الرجاء تحديد درس من قائمة الحلقات لتفاصيل أكثر.
-                    </div>
+          {/* Lesson Title & Details Header */}
+          {currentLesson && (
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800/80 p-5 sm:p-6 shadow-xl space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs font-bold">
+                    الدرس #{currentIndex + 1}
+                  </span>
+                  {currentLesson.duration_minutes && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-xs font-medium">
+                      <FaClock className="text-slate-400 text-xs" />
+                      {currentLesson.duration_minutes} دقيقة
+                    </span>
                   )}
+                  {currentLesson.is_free && (
+                    <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+                      درس مجاني
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-bold text-white">
+                {currentLesson.title}
+              </h2>
+
+              {/* Description Card */}
+              {currentLesson.description && (
+                <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-800 text-slate-300 text-xs sm:text-sm leading-relaxed">
+                  <h4 className="font-bold text-slate-200 mb-1 text-xs uppercase tracking-wider">
+                    الوصف المختصر:
+                  </h4>
+                  <p>{currentLesson.description}</p>
                 </div>
               )}
 
-              {activeTab === "comments" && (
+              {/* Detailed Content Body */}
+              {currentLesson.content && (
                 <div>
-                  {currentLessonId ? (
-                    <CommentLesson lessonId={currentLessonId} />
-                  ) : (
-                    <div className="text-center py-6 text-slate-400 text-xs">
-                      الرجاء اختيار درس لعرض الأسئلة والتعليقات الخاصة به.
+                  <h3 className="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">
+                    محتوى الدرس:
+                  </h3>
+                  <div className="prose prose-invert max-w-none text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-800/20 p-4 rounded-xl border border-slate-800/60 whitespace-pre-wrap">
+                    {currentLesson.content}
+                  </div>
+                </div>
+              )}
+
+              {/* Instructor info block */}
+              {course && (
+                <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold">
+                      <FaUserGraduate />
                     </div>
-                  )}
+                    <div>
+                      <h4 className="text-xs font-bold text-white">
+                        {course.instructor_name || "روز أكاديمي"}
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        مدرس الكورس • {course.title}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* COMMENTS SECTION - PLACED DIRECTLY BELOW THE LESSON */}
+          {currentLessonId && (
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800/80 p-5 sm:p-6 shadow-xl">
+              <CommentLesson lessonId={currentLessonId} />
+            </div>
+          )}
         </main>
 
-        {/* Desktop Sidebar */}
+        {/* Desktop Sidebar Playlist */}
         <aside className="hidden lg:block w-80 flex-shrink-0 h-auto overflow-hidden">
           <Sidebar
             lessons={filteredLessons}

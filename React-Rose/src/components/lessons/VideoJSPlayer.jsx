@@ -336,15 +336,8 @@ const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd, qualitySou
           </div>
         </div>
       </div>
-    );
-  }
-
   return (
     <div ref={containerRef} className="relative w-full video-container">
-      <div className="absolute top-4 right-4 z-50 flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-green-500/90 text-white pointer-events-none">
-        <FaShieldAlt />
-        <span>{t("lessons.videoPlayer.protected", "محمي")}</span>
-      </div>
 
       <div data-vjs-player>
         <video

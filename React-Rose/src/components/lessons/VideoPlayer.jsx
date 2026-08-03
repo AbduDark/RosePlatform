@@ -557,14 +557,6 @@ const VideoPlayer = ({ lessonId, lessonData, onLessonChange, onVideoEnd }) => {
       userId={user?.id}
     >
       <div ref={containerRef} className="relative w-full bg-black rounded-lg overflow-hidden group">
-        {/* Protected Badge */}
-        <div className="absolute top-4 right-4 z-20 flex items-center space-x-2">
-          <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-green-500/90 text-white">
-            <FaShieldAlt />
-            <span>{t("lessons.videoPlayer.protected", "محمي")}</span>
-          </div>
-        </div>
-
         {/* Video Element */}
         <div className="relative" style={{ paddingTop: "56.25%" }}>
           <video
