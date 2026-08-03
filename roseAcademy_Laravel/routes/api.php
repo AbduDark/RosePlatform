@@ -176,4 +176,6 @@ Route::middleware(['auth:sanctum', AdminMiddleware::class])
         Route::post('video/{lesson}/upload', [VideoController::class, 'upload'])->name('admin.video.upload');
         Route::post('video/{lesson}/youtube', [VideoController::class, 'saveYouTubeUrl'])->name('admin.video.youtube');
         Route::delete('video/{lesson}/delete', [VideoController::class, 'delete'])->name('admin.video.delete');
+        Route::delete('video/{lesson}', [VideoController::class, 'delete']);
+        Route::delete('lessons/{lesson}/video', [VideoController::class, 'delete']);
     });

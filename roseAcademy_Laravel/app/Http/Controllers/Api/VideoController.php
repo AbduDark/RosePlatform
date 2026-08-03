@@ -188,8 +188,31 @@ $videoPath = str_replace('storage/', '', $videoPath);
                 return $this->errorResponse('الدرس غير موجود', 404);
             }
 
+            // Delete from public disk
             if ($lesson->video_path && Storage::disk('public')->exists($lesson->video_path)) {
                 Storage::disk('public')->delete($lesson->video_path);
+            }
+
+            // Delete from local private storage
+            if ($lesson->video_path && Storage::exists($lesson->video_path)) {
+                Storage::delete($lesson->video_path);
+            }
+
+            // Delete entire lesson private directory
+            $privateDir = 'private_videos/lesson_' . $lesson->id;
+            if (Storage::exists($privateDir)) {
+                Storage::deleteDirectory($privateDir);
+            }
+
+            $fullDir = storage_path('app/private_videos/lesson_' . $lesson->id);
+            if (is_dir($fullDir)) {
+                $files = glob("$fullDir/*");
+                if (is_array($files)) {
+                    foreach ($files as $file) {
+                        if (is_file($file)) @unlink($file);
+                    }
+                }
+                @rmdir($fullDir);
             }
 
             $lesson->update([
