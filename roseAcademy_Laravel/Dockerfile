@@ -6,10 +6,7 @@ RUN apk add --no-cache git unzip icu-dev libzip-dev libpng-dev libjpeg-turbo-dev
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
-COPY composer.json composer.lock ./
-RUN composer install --no-interaction --prefer-dist --no-scripts
 COPY . .
-RUN composer dump-autoload --optimize
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint
