@@ -9,6 +9,19 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
   const { user } = useAuth();
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
+  // Prevent any clipboard write attempts when player is active
+  React.useEffect(() => {
+    const handleCopy = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+    window.addEventListener("copy", handleCopy, true);
+    return () => {
+      window.removeEventListener("copy", handleCopy, true);
+    };
+  }, []);
+
   const rawUrl = embedUrl || youtubeUrl;
 
   const getEmbedUrl = (url) => {
@@ -19,7 +32,7 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
     const pattern = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
     const match = url.match(pattern);
     if (match && match[1]) {
-      return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=0&fs=1&enablejsapi=1`;
+      return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&showinfo=0&disablekb=0&fs=0&enablejsapi=1`;
     }
     return url;
   };
@@ -58,23 +71,25 @@ const YouTubeSecurePlayer = ({ embedUrl, youtubeUrl, lessonTitle, lessonId }) =>
             src={finalEmbedUrl}
             title={lessonTitle || "Lesson Video"}
             className="absolute top-0 left-0 w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen={false}
             onLoad={() => setIframeLoaded(true)}
             onContextMenu={(e) => e.preventDefault()}
           />
 
-          {/* Top Bar Masking Overlay to block YouTube Title/Share link clicks */}
+          {/* Top Bar Masking Overlay to block YouTube Title, Channel, & Share link clicks */}
           <div 
-            className="absolute top-0 left-0 right-0 h-14 z-20 bg-transparent pointer-events-auto cursor-default"
+            className="absolute top-0 left-0 right-0 h-16 z-20 bg-transparent pointer-events-auto cursor-default"
             onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
             title="Rose Academy Video Player"
           />
 
           {/* Bottom Right Logo Masking Overlay to block YouTube Logo redirect */}
           <div 
-            className="absolute bottom-0 right-0 w-28 h-12 z-20 bg-transparent pointer-events-auto cursor-default"
+            className="absolute bottom-0 right-0 w-36 h-14 z-20 bg-transparent pointer-events-auto cursor-default"
             onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           />
 
           {/* Security Watermark floating */}
