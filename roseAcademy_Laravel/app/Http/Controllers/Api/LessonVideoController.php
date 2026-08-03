@@ -326,21 +326,24 @@ public function upload(Request $request, $lessonId)
             $length   = $end - $start + 1;
             $mimeType = mime_content_type($videoPath) ?: 'video/mp4';
 
-            // ─── Step 5: Strict anti-download headers ──────────────────────────
+            // ─── Step 5: Anti-download & Cross-Origin streaming headers ──────────────────
+            $origin = $request->header('Origin') ?: 'https://rose-academy.com';
             $headers = [
                 'Content-Type'                => $mimeType,
                 'Content-Length'              => $length,
                 'Accept-Ranges'               => 'bytes',
                 'Content-Disposition'         => 'inline',
+                'Access-Control-Allow-Origin' => $origin,
+                'Access-Control-Allow-Methods'=> 'GET, HEAD, OPTIONS',
+                'Access-Control-Allow-Headers'=> 'Range, Authorization, Content-Type, Origin, Accept',
+                'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges, Content-Type',
+                'Access-Control-Allow-Credentials' => 'true',
                 'Cache-Control'               => 'no-cache, no-store, must-revalidate, private, max-age=0',
                 'Pragma'                      => 'no-cache',
                 'Expires'                     => '0',
                 'X-Content-Type-Options'      => 'nosniff',
-                'X-Frame-Options'             => 'SAMEORIGIN',
-                'Content-Security-Policy'     => "default-src 'self'; media-src 'self'",
                 'X-Robots-Tag'               => 'noindex, nofollow, nosnippet, noarchive',
                 'Referrer-Policy'             => 'strict-origin-when-cross-origin',
-                // Tell browsers this is NOT a downloadable attachment
                 'X-Download-Options'          => 'noopen',
             ];
 

@@ -1,429 +1,371 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import videojs from "video.js";
-import "video.js/dist/video-js.css";
-import { FaShieldAlt } from "react-icons/fa";
+import {
+  FiPlay,
+  FiPause,
+  FiVolume2,
+  FiVolumeX,
+  FiMaximize,
+  FiMinimize,
+  FiRotateCcw,
+  FiShield,
+  FiSettings,
+} from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 
-
-const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd, qualitySources }) => {
+const VideoJSPlayer = ({ videoUrl, lessonId, lessonTitle, onVideoEnd }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const videoRef = useRef(null);
-  const playerRef = useRef(null);
   const containerRef = useRef(null);
-  const [isReady, setIsReady] = useState(false);
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [error, setError] = useState(null);
-  const [currentQuality, setCurrentQuality] = useState(null);
-  const initTimeoutRef = useRef(null);
-  const retryCountRef = useRef(0);
-  const maxRetries = 10;
+  const [isLoading, setIsLoading] = useState(true);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef(null);
+
+  // Auto-hide controls after 3 seconds of inactivity
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) setShowControls(false);
+    }, 3000);
+  };
 
   useEffect(() => {
-    if (!videoUrl) {
-      console.warn("No video URL provided for lesson:", lessonId);
-      return;
-    }
+    const video = videoRef.current;
+    if (!video || !videoUrl) return;
 
-    const errorMessages = {
-      loadError: t("lessons.videoPlayer.loadError", "حدث خطأ أثناء تحميل الفيديو"),
-      videoNotAvailable: t("lessons.videoPlayer.videoNotAvailable", "الفيديو غير متوفر حالياً"),
-      formatNotSupported: t("lessons.videoPlayer.formatNotSupported", "صيغة الفيديو غير مدعومة")
+    setIsLoading(true);
+    setError(null);
+    setIsPlaying(false);
+
+    const onLoadedMetadata = () => {
+      setDuration(video.duration || 0);
+      setIsLoading(false);
     };
 
-    if (playerRef.current) {
-      try {
-        playerRef.current.dispose();
-      } catch (err) {
-        console.warn("Error disposing previous player:", err);
-      }
-      playerRef.current = null;
-    }
-
-    const tryInitializePlayer = () => {
-      // Check if ref exists
-      if (!videoRef.current) {
-        if (retryCountRef.current < maxRetries) {
-          retryCountRef.current++;
-          initTimeoutRef.current = setTimeout(tryInitializePlayer, 150);
-        } else {
-          console.error("Max retries reached: video element ref not available");
-          setError("فشل تهيئة مشغل الفيديو - العنصر غير متاح");
-        }
-        return;
-      }
-
-      // Check if element is connected to DOM and visible
-      const isConnected = videoRef.current.isConnected;
-      const isInDocument = document.body.contains(videoRef.current);
-      const hasParent = videoRef.current.parentElement !== null;
-      
-      if (!isConnected || !isInDocument || !hasParent) {
-        if (retryCountRef.current < maxRetries) {
-          retryCountRef.current++;
-          console.log(`Retry ${retryCountRef.current}/${maxRetries}: Waiting for DOM connection...`);
-          initTimeoutRef.current = setTimeout(tryInitializePlayer, 150);
-        } else {
-          console.error("Max retries reached: video element not connected to DOM");
-          // Component might be unmounting, don't show error
-          return;
-        }
-        return;
-      }
-
-      const videoElement = videoRef.current;
-      retryCountRef.current = 0;
-
-      console.log("🎬 VideoJS Attempting Load:", {
-        lessonId,
-        videoUrl,
-      });
-
-      // Diagnostic check: test stream URL headers & status directly in browser
-      if (videoUrl) {
-        fetch(videoUrl, { method: "HEAD" })
-          .then((res) => {
-            console.log("🎥 Video Stream URL Diagnostic Check:", {
-              status: res.status,
-              statusText: res.statusText,
-              contentType: res.headers.get("content-type"),
-              contentLength: res.headers.get("content-length"),
-              acceptRanges: res.headers.get("accept-ranges"),
-              url: videoUrl,
-            });
-          })
-          .catch((err) => {
-            console.error("❌ Video Stream URL Fetch Check Failed:", err, videoUrl);
-          });
-      }
-
-      try {
-        const player = videojs(videoElement, {
-          controls: true,
-          responsive: true,
-          fluid: true,
-          preload: "auto",
-          sources: [
-            {
-              src: videoUrl,
-              type: "video/mp4",
-            },
-          ],
-          playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
-          controlBar: {
-            children: [
-              "playToggle",
-              "volumePanel",
-              "currentTimeDisplay",
-              "timeDivider",
-              "durationDisplay",
-              "progressControl",
-              "playbackRateMenuButton",
-              "qualitySelector",
-              "fullscreenToggle",
-            ],
-          },
-          html5: {
-            nativeAudioTracks: true,
-            nativeVideoTracks: true,
-          },
-          techOrder: ["html5"],
-          userActions: {
-            hotkeys: true,
-          },
-        });
-
-        player.ready(() => {
-          console.log("Video player is ready for lesson:", lessonId);
-          player.src({ src: videoUrl, type: "video/mp4" });
-          setIsReady(true);
-          setError(null);
-
-          player.el().addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            return false;
-          });
-
-          if (videoElement) {
-            videoElement.disablePictureInPicture = true;
-            videoElement.setAttribute("disablePictureInPicture", "");
-            videoElement.setAttribute("controlsList", "nodownload noremoteplayback");
-            videoElement.oncontextmenu = () => false;
-          }
-
-          player.on("ended", () => {
-            console.log("Video ended for lesson:", lessonId);
-            onVideoEnd?.();
-          });
-
-          player.on("error", (e) => {
-            const error = player.error();
-            console.error("Video playback error:", error);
-            if (error) {
-              let errorMessage = errorMessages.loadError;
-
-              switch (error.code) {
-                case 1:
-                  errorMessage = "تم إلغاء تحميل الفيديو";
-                  break;
-                case 2:
-                  errorMessage = errorMessages.videoNotAvailable;
-                  break;
-                case 3:
-                  errorMessage = "فشل فك تشفير الفيديو. يرجى تحديث المتصفح";
-                  break;
-                case 4:
-                  errorMessage = errorMessages.formatNotSupported;
-                  break;
-                default:
-                  if (error.message) {
-                    errorMessage = error.message;
-                  }
-              }
-
-              setError(errorMessage);
-            }
-          });
-
-          player.on("playing", () => {
-            console.log("Video is now playing successfully");
-            setError(null);
-          });
-
-          player.on("loadedmetadata", () => {
-            console.log("Video metadata loaded. Duration:", player.duration());
-          });
-
-          if (qualitySources && qualitySources.length > 1) {
-            const qualities = qualitySources;
-            const QualityButton = videojs.getComponent("MenuButton");
-            const QualityOption = videojs.getComponent("MenuItem");
-
-            class QualitySelectorButton extends QualityButton {
-              constructor(player, options) {
-                super(player, options);
-                this.controlText(currentQuality || qualities[0]?.label || "Auto");
-              }
-
-              createEl() {
-                const el = super.createEl("div", {
-                  className: "vjs-quality-selector vjs-menu-button vjs-menu-button-popup vjs-control vjs-button",
-                });
-                el.setAttribute("aria-label", t("lessons.videoPlayer.quality", "الجودة"));
-                return el;
-              }
-
-              buildCSSClass() {
-                return `vjs-quality-selector ${super.buildCSSClass()}`;
-              }
-
-              createItems() {
-                return qualities.map((quality) => {
-                  const item = new QualityOption(this.player_, {
-                    label: quality.label,
-                    selected: currentQuality === quality.label,
-                  });
-
-                  item.handleClick = () => {
-                    const currentTime = this.player_.currentTime();
-                    const wasPaused = this.player_.paused();
-                    
-                    this.player_.src({
-                      src: quality.src,
-                      type: quality.type || "video/mp4",
-                    });
-                    
-                    this.player_.one("loadedmetadata", () => {
-                      this.player_.currentTime(currentTime);
-                      if (!wasPaused) {
-                        this.player_.play();
-                      }
-                    });
-
-                    setCurrentQuality(quality.label);
-                    this.controlText(quality.label);
-                    
-                    console.log("Quality changed to:", quality.label);
-                  };
-
-                  return item;
-                });
-              }
-            }
-
-            videojs.registerComponent("QualitySelector", QualitySelectorButton);
-            player.getChild("controlBar").addChild("QualitySelector", {}, 
-              player.getChild("controlBar").children().length - 1
-            );
-
-            setCurrentQuality(qualities[0]?.label);
-          }
-        });
-
-        let sourceType = "video/mp4";
-        if (videoUrl.includes(".webm")) {
-          sourceType = "video/webm";
-        } else if (videoUrl.includes(".ogg") || videoUrl.includes(".ogv")) {
-          sourceType = "video/ogg";
-        } else if (videoUrl.includes(".mov")) {
-          sourceType = "video/quicktime";
-        }
-
-        player.src({
-          src: videoUrl,
-          type: sourceType,
-        });
-        
-        if (qualitySources && qualitySources.length > 0) {
-          setCurrentQuality(qualitySources[0].label);
-        } else {
-          setCurrentQuality("Auto");
-        }
-
-        playerRef.current = player;
-
-      } catch (err) {
-        console.error("Error initializing video player:", err);
-        setError("فشل تهيئة مشغل الفيديو");
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime || 0);
+      if (video.buffered.length > 0) {
+        const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+        setBuffered((bufferedEnd / video.duration) * 100);
       }
     };
 
-    // Add a small initial delay to ensure DOM is fully ready
-    initTimeoutRef.current = setTimeout(tryInitializePlayer, 100);
+    const onEnded = () => {
+      setIsPlaying(false);
+      if (onVideoEnd) onVideoEnd();
+    };
+
+    const onError = (e) => {
+      console.error("Video Error:", e, video.error);
+      setIsLoading(false);
+      setError(
+        video.error?.message ||
+          t("lessons.videoPlayer.loadError", "فشل تحميل الفيديو. يرجى إعادة محاولة التحميل.")
+      );
+    };
+
+    const onWaiting = () => setIsLoading(true);
+    const onCanPlay = () => setIsLoading(false);
+
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("ended", onEnded);
+    video.addEventListener("error", onError);
+    video.addEventListener("waiting", onWaiting);
+    video.addEventListener("canplay", onCanPlay);
 
     return () => {
-      retryCountRef.current = 0;
-
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-        initTimeoutRef.current = null;
-      }
-
-      if (playerRef.current) {
-        try {
-          const player = playerRef.current;
-          if (player && !player.isDisposed()) {
-            player.dispose();
-          }
-        } catch (error) {
-          console.error('Error disposing player:', error);
-        } finally {
-          playerRef.current = null;
-        }
-      }
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("ended", onEnded);
+      video.removeEventListener("error", onError);
+      video.removeEventListener("waiting", onWaiting);
+      video.removeEventListener("canplay", onCanPlay);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
-  }, [videoUrl, lessonId, onVideoEnd, user, t, qualitySources]);
+  }, [videoUrl, lessonId, onVideoEnd, t]);
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.error("Play error:", err);
+          setError("لم يتم التمكن من تشغيل الفيديو تلقائياً");
+        });
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const handleSeek = (e) => {
+    const video = videoRef.current;
+    if (!video || !duration) return;
+    const newTime = (parseFloat(e.target.value) / 100) * duration;
+    video.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const handleVolumeChange = (e) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const newVol = parseFloat(e.target.value);
+    video.volume = newVol;
+    setVolume(newVol);
+    setIsMuted(newVol === 0);
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+  const handleRateChange = (rate) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = rate;
+    setPlaybackRate(rate);
+    setShowSpeedMenu(false);
+  };
+
+  const toggleFullscreen = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!document.fullscreenElement) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
+
+  const formatTime = (secs) => {
+    if (!secs || isNaN(secs)) return "00:00";
+    const minutes = Math.floor(secs / 60);
+    const seconds = Math.floor(secs % 60);
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   if (!videoUrl) {
     return (
-      <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-xl" style={{ paddingTop: "56.25%" }}>
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          <div className="text-center">
-            <div className="mb-6">
-              <svg className="w-24 h-24 mx-auto text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-3">
-              {t("lessons.videoPlayer.noVideo", "لم يتم رفع الفيديو الخاص بهذا الدرس بعد")}
-            </h3>
-            <p className="text-gray-300 text-lg mb-4">
-              {t("lessons.videoPlayer.videoComingSoon", "فيديو هذا الدرس سيتم رفعه قريباً")}
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 rounded-lg border border-blue-500/30">
-              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-blue-300 text-sm font-medium">
-                {t("lessons.videoPlayer.checkBackLater", "يرجى المتابعة في وقت لاحق")}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="relative w-full bg-gradient-to-br from-red-900/30 to-gray-900 rounded-lg shadow-xl border border-red-500/20" style={{ paddingTop: "56.25%" }}>
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          <div className="text-center max-w-md">
-            <div className="mb-6">
-              <svg className="w-20 h-20 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-red-400 mb-3">
-              {t("lessons.videoPlayer.error", "حدث خطأ")}
-            </h3>
-            <p className="text-red-300 text-base mb-2">{error}</p>
-            <p className="text-gray-400 text-sm">
-              {t("lessons.videoPlayer.noVideoDescription", "يرجى التحقق لاحقاً أو التواصل مع المدرس")}
-            </p>
-          </div>
+      <div
+        className="relative w-full bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-center p-8 text-center"
+        style={{ minHeight: "380px" }}
+      >
+        <div className="text-slate-400">
+          <FiShield className="w-16 h-16 mx-auto mb-4 opacity-40 text-purple-400" />
+          <h3 className="text-xl font-bold text-white mb-2">لم يتم رفع الفيديو الخاص بهذا الدرس بعد</h3>
+          <p className="text-sm">يرجى مراجعة المحاضر لتأكيد رفع ملف الفيديو</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="relative w-full video-container">
+    <div
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl group border border-slate-800/80 select-none"
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {/* Video Element */}
+      <video
+        ref={videoRef}
+        src={videoUrl}
+        className="w-full h-full object-contain cursor-pointer"
+        style={{ minHeight: "380px", maxHeight: isFullscreen ? "100vh" : "70vh" }}
+        onClick={togglePlay}
+        playsInline
+        controlsList="nodownload noremoteplayback"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+      />
 
-      <div data-vjs-player>
-        <video
-          ref={videoRef}
-          className="video-js vjs-big-play-centered vjs-theme-rose"
-          playsInline
-          onContextMenu={(e) => e.preventDefault()}
-        />
+      {/* Floating Watermark Protection */}
+      {user && (
+        <div className="absolute top-4 right-4 pointer-events-none z-20 opacity-30 text-[11px] text-white font-mono bg-black/60 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
+          {user.name} • {user.phone || user.email}
+        </div>
+      )}
+
+      {/* Loading Spinner */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30">
+          <div className="w-14 h-14 border-4 border-purple-500 border-t-transparent rounded-full animate-spin shadow-lg" />
+        </div>
+      )}
+
+      {/* Error Overlay */}
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 z-40 p-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4 text-red-400">
+            <FiShield className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">خطأ في تحميل الفيديو</h3>
+          <p className="text-sm text-slate-400 max-w-md mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              if (videoRef.current) {
+                videoRef.current.load();
+              }
+            }}
+            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2"
+          >
+            <FiRotateCcw className="w-4 h-4" />
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
+      {/* Big Play Button Overlay */}
+      {!isPlaying && !isLoading && !error && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer z-20 hover:bg-black/20 transition-all"
+        >
+          <div className="w-20 h-20 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-2xl shadow-purple-600/50 hover:scale-110 transition-transform border border-purple-400/40">
+            <FiPlay className="w-9 h-9 translate-x-0.5" />
+          </div>
+        </div>
+      )}
+
+      {/* Custom Control Bar */}
+      <div
+        className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 z-30 transition-opacity duration-300 ${
+          showControls || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {/* Progress Seek Bar */}
+        <div className="relative w-full mb-3 group/timeline cursor-pointer">
+          {/* Buffer Track */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 left-0 h-1.5 bg-slate-700 rounded-full pointer-events-none transition-all"
+            style={{ width: `${buffered}%` }}
+          />
+          {/* Active Track */}
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={duration ? (currentTime / duration) * 100 : 0}
+            onChange={handleSeek}
+            className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-purple-500 hover:h-2.5 transition-all"
+          />
+        </div>
+
+        {/* Control Buttons */}
+        <div className="flex items-center justify-between text-white text-sm">
+          {/* Left Controls: Play/Pause, Volume, Time */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={togglePlay}
+              className="text-slate-200 hover:text-purple-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
+            >
+              {isPlaying ? <FiPause className="w-5 h-5" /> : <FiPlay className="w-5 h-5" />}
+            </button>
+
+            {/* Volume */}
+            <div className="flex items-center gap-2 group/vol">
+              <button
+                onClick={toggleMute}
+                className="text-slate-200 hover:text-purple-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
+              >
+                {isMuted || volume === 0 ? (
+                  <FiVolumeX className="w-5 h-5 text-red-400" />
+                ) : (
+                  <FiVolume2 className="w-5 h-5" />
+                )}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-16 h-1 bg-slate-700 rounded-full appearance-none cursor-pointer accent-purple-400"
+              />
+            </div>
+
+            {/* Time Counter */}
+            <div className="text-xs font-mono text-slate-300">
+              <span>{formatTime(currentTime)}</span>
+              <span className="mx-1 text-slate-500">/</span>
+              <span className="text-slate-400">{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          {/* Right Controls: Title, Playback Rate, Fullscreen */}
+          <div className="flex items-center gap-3">
+            {/* Speed Rate Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                className="flex items-center gap-1 text-xs font-bold text-slate-300 hover:text-purple-400 px-2.5 py-1.5 rounded-lg hover:bg-white/10 transition-colors border border-white/10"
+              >
+                <FiSettings className="w-3.5 h-3.5" />
+                <span>{playbackRate}x</span>
+              </button>
+
+              {showSpeedMenu && (
+                <div className="absolute bottom-full right-0 mb-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 w-24 z-50 text-xs">
+                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                    <button
+                      key={rate}
+                      onClick={() => handleRateChange(rate)}
+                      className={`w-full text-right px-3 py-1.5 hover:bg-purple-600/30 transition-colors flex items-center justify-between ${
+                        playbackRate === rate ? "text-purple-400 font-bold bg-purple-500/10" : "text-slate-300"
+                      }`}
+                    >
+                      <span>{rate}x</span>
+                      {playbackRate === rate && <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Fullscreen */}
+            <button
+              onClick={toggleFullscreen}
+              className="text-slate-200 hover:text-purple-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
+            >
+              {isFullscreen ? <FiMinimize className="w-5 h-5" /> : <FiMaximize className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
       </div>
-
-      <style>{`
-        .video-container {
-          position: relative;
-          background: #000;
-          border-radius: 0.5rem;
-          overflow: hidden;
-        }
-
-        .video-container * {
-          user-select: none !important;
-          -webkit-user-select: none !important;
-          -moz-user-select: none !important;
-          -ms-user-select: none !important;
-        }
-
-        :global(.vjs-theme-rose .vjs-big-play-button) {
-          background-color: rgba(59, 130, 246, 0.9);
-          border: none;
-          border-radius: 50%;
-        }
-
-        :global(.vjs-theme-rose .vjs-big-play-button:hover) {
-          background-color: rgba(37, 99, 235, 1);
-        }
-
-        :global(.vjs-theme-rose .vjs-control-bar) {
-          background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-        }
-
-        :global(.vjs-theme-rose .vjs-play-progress) {
-          background-color: #3b82f6;
-        }
-
-        :global(.vjs-theme-rose .vjs-volume-level) {
-          background-color: #3b82f6;
-        }
-
-        :global(.vjs-theme-rose .vjs-download-button) {
-          display: none !important;
-        }
-
-        :global([dir="rtl"] .vjs-control-bar) {
-          direction: ltr;
-        }
-      `}</style>
     </div>
   );
 };
