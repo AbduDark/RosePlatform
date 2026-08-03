@@ -777,18 +777,21 @@ public function upload(Request $request, $lessonId)
     // }
 
     /**
-     * Stream a video file with proper HTTP Range (byte-range) support.
+     * Stream a video file with full HTTP Range (byte-range) support.
      *
-     * Uses Symfony BinaryFileResponse (via response()->file) which natively handles:
-     * - 206 Partial Content byte ranges required by HTML5 <video> elements
-     * - Content-Type, Content-Length, Accept-Ranges
-     * - Disabling FastCGI buffering (X-Accel-Buffering: no)
-     * - Avoiding duplicate CORS headers (which causes MediaError code 4 in Chrome)
+     * HTML5 <video> elements require 206 Partial Content responses for
+     * seeking and buffering to work correctly. response()->file() sends
+     * 200 OK with the full file and does NOT handle Range requests —
+     * this causes MediaError in Chrome/Firefox.
+     *
+     * This method manually parses the Range header and returns:
+     *   - 206 Partial Content  (when Range header is present)
+     *   - 200 OK               (full file, no Range header)
      */
     private function streamVideoFile(Request $request, string $videoPath, Lesson $lesson)
     {
         $fileSize = filesize($videoPath);
-        $ext = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
+        $ext      = strtolower(pathinfo($videoPath, PATHINFO_EXTENSION));
 
         $mimeTypes = [
             'mp4'  => 'video/mp4',
@@ -809,14 +812,81 @@ public function upload(Request $request, $lessonId)
             'range'      => $request->header('Range'),
         ]);
 
-        $headers = [
-            'Content-Type'        => $mimeType,
-            'Content-Disposition' => 'inline',
-            'Accept-Ranges'       => 'bytes',
-            'Cache-Control'       => 'private, max-age=3600',
-            'X-Accel-Buffering'   => 'no',
-        ];
+        $start = 0;
+        $end   = $fileSize - 1;
+        $rangeHeader = $request->header('Range');
 
-        return response()->file($videoPath, $headers);
+        // ── Handle Range request (byte-range) ───────────────────────────────
+        if ($rangeHeader && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $matches)) {
+            $start = $matches[1] !== '' ? (int) $matches[1] : 0;
+            $end   = $matches[2] !== '' ? (int) $matches[2] : $fileSize - 1;
+
+            // Clamp to valid bounds
+            $start = max(0, min($start, $fileSize - 1));
+            $end   = max($start, min($end, $fileSize - 1));
+
+            $length = $end - $start + 1;
+
+            $stream = fopen($videoPath, 'rb');
+            if ($stream === false) {
+                return $this->errorResponse('لا يمكن قراءة ملف الفيديو', 500);
+            }
+            fseek($stream, $start);
+
+            return response()->stream(
+                function () use ($stream, $length) {
+                    $remaining = $length;
+                    $chunkSize = 1024 * 256; // 256 KB chunks
+
+                    while ($remaining > 0 && !feof($stream)) {
+                        $readSize = min($chunkSize, $remaining);
+                        $data     = fread($stream, $readSize);
+                        if ($data === false) break;
+                        echo $data;
+                        flush();
+                        $remaining -= strlen($data);
+                    }
+                    fclose($stream);
+                },
+                206,
+                [
+                    'Content-Type'        => $mimeType,
+                    'Content-Disposition' => 'inline',
+                    'Accept-Ranges'       => 'bytes',
+                    'Content-Range'       => "bytes {$start}-{$end}/{$fileSize}",
+                    'Content-Length'      => $length,
+                    'Cache-Control'       => 'private, max-age=3600',
+                    'X-Accel-Buffering'   => 'no',
+                ]
+            );
+        }
+
+        // ── Full file response (no Range header) ────────────────────────────
+        $stream = fopen($videoPath, 'rb');
+        if ($stream === false) {
+            return $this->errorResponse('لا يمكن قراءة ملف الفيديو', 500);
+        }
+
+        return response()->stream(
+            function () use ($stream) {
+                $chunkSize = 1024 * 256; // 256 KB chunks
+                while (!feof($stream)) {
+                    $data = fread($stream, $chunkSize);
+                    if ($data === false) break;
+                    echo $data;
+                    flush();
+                }
+                fclose($stream);
+            },
+            200,
+            [
+                'Content-Type'        => $mimeType,
+                'Content-Disposition' => 'inline',
+                'Accept-Ranges'       => 'bytes',
+                'Content-Length'      => $fileSize,
+                'Cache-Control'       => 'private, max-age=3600',
+                'X-Accel-Buffering'   => 'no',
+            ]
+        );
     }
 }
