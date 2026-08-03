@@ -40,7 +40,7 @@ public function upload(Request $request, $lessonId)
 
             // Validate video file
             $request->validate([
-                'video' => 'required|file|mimes:mp4,mov,avi,wmv,webm|max:10485760', // 10GB max
+                'video' => 'required|file|mimes:mp4,mov,avi,wmv,webm|max:10485760', // 10 GB
                 'is_protected' => 'boolean'
             ]);
 
@@ -94,10 +94,10 @@ public function upload(Request $request, $lessonId)
 
             $videoDuration = $this->getVideoDuration($fullPath);
 
-            // تحديث الدرس فوراً إلى ready
+            // تحديث الدرس كـ processing وإرسال المهمة للـ Queue
             $lesson->update([
                 'video_path' => $videoPath,
-                'video_status' => 'ready',
+                'video_status' => 'processing',
                 'is_video_protected' => $request->get('is_protected', true),
                 'video_duration' => $videoDuration,
                 'video_size' => $videoSize,
@@ -110,14 +110,17 @@ public function upload(Request $request, $lessonId)
                 ]
             ]);
 
+            // Dispatch background compression job
+            ProcessLessonVideo::dispatch($lesson);
+
             return $this->successResponse([
                 'lesson_id' => $lesson->id,
-                'status' => 'ready',
+                'status' => 'processing',
                 'upload_progress' => 100,
-                'message' => 'تم رفع ومعالجة الفيديو بنجاح',
+                'message' => 'تم رفع الفيديو وجاري المعالجة والضغط في الخلفية',
                 'video_stream_url' => $lesson->getVideoStreamUrl(),
                 'status_url' => route('lesson.video.status', ['lesson' => $lesson->id])
-            ], 'تم رفع الفيديو بنجاح');
+            ], 'تم رفع الفيديو وجاري الضغط والمعالجة');
 
         } catch (\Exception $e) {
             Log::error('Video upload error: ' . $e->getMessage(), [

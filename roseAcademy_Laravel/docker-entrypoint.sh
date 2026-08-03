@@ -26,6 +26,17 @@ if [ "$1" = "php-fpm" ]; then
     php artisan migrate --force --no-interaction
     php artisan storage:link >/dev/null 2>&1 || true
     php artisan optimize:clear
+
+    # ─── تشغيل Laravel Scheduler في الخلفية داخل الكونتينر ─────────────────
+    # يُشغّل schedule:run كل 60 ثانية بدلاً من الاعتماد على Cron خارجي
+    echo "Starting Laravel Scheduler in background..."
+    (
+        while true; do
+            php artisan schedule:run --no-interaction >> storage/logs/scheduler.log 2>&1
+            sleep 60
+        done
+    ) &
+    echo "Laravel Scheduler started (PID: $!)"
 fi
 
 exec "$@"
