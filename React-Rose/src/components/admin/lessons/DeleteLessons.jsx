@@ -46,7 +46,7 @@ function DeleteLesson({ lesson, onLessonDeleted, isOpen, onClose }) {
 
           {error && (
             <div className="mb-4 p-3 bg-red-600/20 border border-red-500 rounded-lg text-red-300 text-sm">
-              {error}
+              {typeof error === "object" ? (error.ar || error.en || JSON.stringify(error)) : String(error)}
             </div>
           )}
 
