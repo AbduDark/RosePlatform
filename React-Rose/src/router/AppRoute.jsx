@@ -27,7 +27,7 @@ const PrivateRoute = lazy(() => import("../router/PrivateRoute"));
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const { sessionExpired, kickedOut } = useAuth();
+  const { sessionExpired } = useAuth();
   const [showSessionModal, setShowSessionModal] = useState(false);
 
   useEffect(() => {
@@ -42,14 +42,13 @@ function AnimatedRoutes() {
   };
 
   const Layout = ({ children }) => (
-    <div className="flex flex-col min-h-screen bg-slate-950 transition-colors duration-300">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <Header />
       <main className="flex-grow">{children}</main>
       <Footer />
-      <SessionExpiredModal
-        isOpen={showSessionModal}
-        onClose={handleCloseModal}
-        kickedOut={kickedOut}
+      <SessionExpiredModal 
+        isOpen={showSessionModal} 
+        onClose={handleCloseModal} 
       />
     </div>
   );
