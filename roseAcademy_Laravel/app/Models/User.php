@@ -18,6 +18,7 @@ class User extends Authenticatable
         'password',
         'phone',
         'gender',
+        'grade',
         'role',
         'image',
         'active_session_id',

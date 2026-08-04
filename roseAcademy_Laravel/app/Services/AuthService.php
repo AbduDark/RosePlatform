@@ -25,6 +25,7 @@ class AuthService
             'password'          => Hash::make($data['password']),
             'phone'             => $data['phone'],
             'gender'            => $data['gender'],
+            'grade'             => $data['grade'] ?? 'الاول',
             'role'              => 'student',
             'email_verified_at' => now(), // Auto-verify email
         ]);
@@ -56,6 +57,7 @@ class AuthService
             'email'     => $user->email,
             'phone'     => $user->phone,
             'gender'    => $user->gender,
+            'grade'     => $user->grade ?? 'الاول',
             'role'      => $user->role ?? 'student',
             'image_url' => $user->image ? url('storage/' . $user->image) : null,
         ];
@@ -102,6 +104,7 @@ class AuthService
             'email'     => $user->email,
             'phone'     => $user->phone,
             'gender'    => $user->gender,
+            'grade'     => $user->grade ?? 'الاول',
             'role'      => $user->role ?? 'student',
             'image_url' => $user->image ? url('storage/' . $user->image) : null,
         ];

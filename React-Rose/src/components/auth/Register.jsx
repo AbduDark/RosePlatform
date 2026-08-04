@@ -15,6 +15,7 @@ function Register() {
     password_confirmation: "",
     phone: "",
     gender: "",
+    grade: "الاول",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -113,6 +114,10 @@ function Register() {
     }
     if (!formData.gender) {
       setError(t("auth.register.validation.genderRequired"));
+      return false;
+    }
+    if (!formData.grade) {
+      setError("يرجى اختيار صفك الدراسي");
       return false;
     }
     return true;
@@ -346,6 +351,24 @@ function Register() {
                       <span>{t("auth.register.female")}</span>
                     </label>
                   </div>
+                </div>
+
+                {/* Grade Selection */}
+                <div className="relative">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 px-1">
+                    الصف الدراسي
+                  </label>
+                  <select
+                    name="grade"
+                    value={formData.grade}
+                    onChange={handleChange}
+                    className="h-12 w-full text-base font-normal rounded-lg outline-none px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 dark:focus:border-primary transition-all"
+                    required
+                  >
+                    <option value="الاول">الصف الأول الثانوي (أولى ثانوي)</option>
+                    <option value="الثاني">الصف الثاني الثانوي (تانية ثانوي)</option>
+                    <option value="الثالث">الصف الثالث الثانوي (تالتة ثانوي)</option>
+                  </select>
                 </div>
 
                 <div className="relative pt-2">

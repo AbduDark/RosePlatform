@@ -136,18 +136,19 @@ export const getProfile = async (token) => {
     throw error;
   }
 };
-export const updateProfile = async ({ name, phone, image }, token, lang = 'ar') => {
+export const updateProfile = async ({ name, phone, grade, image }, token, lang = 'ar') => {
   if (!token) {
     throw new Error("No authentication token provided");
   }
 
-  if (!name && !phone && !image) {
-    throw new Error("At least one field (name, phone, or image) is required");
+  if (!name && !phone && !grade && !image) {
+    throw new Error("At least one field is required");
   }
 
   const formData = new FormData();
   if (name) formData.append("name", name.trim());
   if (phone) formData.append("phone", phone.trim());
+  if (grade) formData.append("grade", grade);
   if (image instanceof File) {
     const validTypes = ["image/jpeg", "image/png", "image/gif"];
     if (!validTypes.includes(image.type)) {

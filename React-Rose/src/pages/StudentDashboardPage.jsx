@@ -32,24 +32,24 @@ const StudentDashboardPage = () => {
       navigate(`${menuItems[0].path}`, { replace: true });
     }
   }, [tab]);
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!token) {
-        setError(t("studentDashboard.noAuthToken"));
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getProfile(token);
-        setProfile(data);
-      } catch (error) {
-        setError(error.message || t("studentDashboard.failedToLoadProfile"));
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchUserData = async () => {
+    if (!token) {
+      setError(t("studentDashboard.noAuthToken"));
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getProfile(token);
+      setProfile(data);
+    } catch (error) {
+      setError(error.message || t("studentDashboard.failedToLoadProfile"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchUserData();
   }, [token]);
 
@@ -72,7 +72,7 @@ const StudentDashboardPage = () => {
       id: 3,
       label: t("studentDashboard.editProfile"),
       icon: <FiEdit className="w-5 h-5" />,
-      component: <EditProfile profile={profile} />,
+      component: <EditProfile profile={profile} onUpdate={fetchUserData} />,
       path: "profile",
     },
     {
@@ -82,12 +82,6 @@ const StudentDashboardPage = () => {
       component: <ChangePassword />,
       path: "change-password",
     },
-    // {
-    //   id: 3,
-    //   label: "Delete Account",
-    //   icon: <FiTrash2 className="w-5 h-5" />,
-    //   component: <DeleteAccount />,
-    // },
   ];
 
   const toggleMenu = () => {
@@ -139,9 +133,9 @@ const StudentDashboardPage = () => {
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row items-center gap-5">
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white p-1 border-4 border-primary/40 shadow-md overflow-hidden flex-shrink-0">
-                {profile?.image ? (
+                {profile?.image || profile?.image_url ? (
                   <img
-                    src={profile.image}
+                    src={profile.image_url || profile.image}
                     alt={profile.name || "User"}
                     className="w-full h-full object-cover rounded-full"
                     onError={(e) => { e.target.style.display = "none"; }}
@@ -155,11 +149,19 @@ const StudentDashboardPage = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-                      {profile.name || "المستخدم"}
+                      {profile?.name || "المستخدم"}
                     </h2>
                     <p className="text-sm text-primary font-semibold mt-1">
-                      {profile.email || "طالب ثانوية عامة"}
+                      {profile?.email || ""}
                     </p>
+                    {profile?.grade && (
+                      <span className="inline-block mt-2 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">
+                        {profile.grade === "الاول" ? "الصف الأول الثانوي" :
+                         profile.grade === "الثاني" ? "الصف الثاني الثانوي" :
+                         profile.grade === "الثالث" ? "الصف الثالث الثانوي" :
+                         profile.grade}
+                      </span>
+                    )}
                   </div>
                   <div className="md:hidden self-center sm:self-start">
                     <button

@@ -37,6 +37,7 @@ class AuthController extends Controller
                 'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]+$/',
                 'phone'    => 'required|string|max:20|unique:users',
                 'gender'   => 'required|in:male,female',
+                'grade'    => 'nullable|in:الاول,الثاني,الثالث',
                 'image'    => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
             ], [
                 'name.required'     => 'الاسم مطلوب|Name is required',
@@ -196,6 +197,7 @@ class AuthController extends Controller
             'email'     => $user->email,
             'phone'     => $user->phone,
             'gender'    => $user->gender,
+            'grade'     => $user->grade ?? 'الاول',
             'role'      => $user->role,
             'image'     => $user->image ? url('storage/' . $user->image) : null,
             'image_url' => $user->image ? url('storage/' . $user->image) : null,
@@ -220,6 +222,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name'  => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
+            'grade' => 'nullable|in:الاول,الثاني,الثالث',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -230,6 +233,9 @@ class AuthController extends Controller
         $user->name = $request->name;
         if ($request->filled('phone')) {
             $user->phone = $request->phone;
+        }
+        if ($request->filled('grade')) {
+            $user->grade = $request->grade;
         }
 
         if ($request->hasFile('image')) {
@@ -245,6 +251,7 @@ class AuthController extends Controller
             'id'        => $user->id,
             'name'      => $user->name,
             'phone'     => $user->phone,
+            'grade'     => $user->grade,
             'image'     => $user->image ? url('storage/' . $user->image) : null,
             'image_url' => $user->image ? url('storage/' . $user->image) : null,
         ], [

@@ -1,9 +1,18 @@
 // components/user/EditProfile.jsx
 import React, { useState, useEffect } from "react";
-import { FaCloudUploadAlt, FaSave, FaTimes } from "react-icons/fa";
+import { FaCloudUploadAlt, FaSave, FaTimes, FaUserCircle, FaGraduationCap } from "react-icons/fa";
+import { FiEdit2 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import { updateProfile } from "../../api/auth";
 import { useTranslation } from "react-i18next";
+
+const GRADE_OPTIONS = [
+  { value: "الاول",  label: "الصف الأول الثانوي  (أولى ثانوي)" },
+  { value: "الثاني", label: "الصف الثاني الثانوي (تانية ثانوي)" },
+  { value: "الثالث", label: "الصف الثالث الثانوي (تالتة ثانوي)" },
+];
+
+const gradeLabel = (val) => GRADE_OPTIONS.find(g => g.value === val)?.label || val || "—";
 
 const EditProfile = ({ profile: initialProfile, onUpdate }) => {
   const { token } = useAuth();
@@ -11,6 +20,7 @@ const EditProfile = ({ profile: initialProfile, onUpdate }) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    grade: "",
     image: null,
   });
   const [profileImage, setProfileImage] = useState(null);
@@ -25,9 +35,10 @@ const EditProfile = ({ profile: initialProfile, onUpdate }) => {
       setFormData({
         name: initialProfile.name || "",
         phone: initialProfile.phone || "",
+        grade: initialProfile.grade || "الاول",
         image: null,
       });
-      setProfileImage(initialProfile.image || null);
+      setProfileImage(initialProfile.image_url || initialProfile.image || null);
     }
   }, [initialProfile]);
 
@@ -35,9 +46,7 @@ const EditProfile = ({ profile: initialProfile, onUpdate }) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setProfileImage(event.target.result);
-      };
+      reader.onload = (event) => setProfileImage(event.target.result);
       reader.readAsDataURL(file);
       setFormData((prev) => ({ ...prev, image: file }));
     }
@@ -58,34 +67,21 @@ const EditProfile = ({ profile: initialProfile, onUpdate }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     if (name === "phone") {
-      // Only allow numbers and limit to 11 digits
-      const numericValue = value.replace(/\D/g, '').slice(0, 11);
-      setFormData((prev) => ({
-        ...prev,
-        [name]: numericValue,
-      }));
-      
-      // Validate on change
-      const error = validatePhoneNumber(numericValue);
-      setPhoneError(error);
+      const numericValue = value.replace(/\D/g, "").slice(0, 11);
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+      setPhoneError(validatePhoneNumber(numericValue));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      setError(t("userProfile.validation.nameRequired"));
+      setError("الاسم مطلوب");
       return;
     }
-    
-    // Validate phone if provided
     if (formData.phone) {
       const phoneValidationError = validatePhoneNumber(formData.phone);
       if (phoneValidationError) {
@@ -94,34 +90,34 @@ const EditProfile = ({ profile: initialProfile, onUpdate }) => {
         return;
       }
     }
-    
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const currentLang = i18n.language || 'ar';
+      const currentLang = i18n.language || "ar";
       const response = await updateProfile(formData, token, currentLang);
-      const updatedProfile = response?.data || response;
-      
-      const successMsg = typeof response.message === 'object' 
-        ? response.message[currentLang] || response.message.en || response.message.ar 
-        : response.message;
-      
-      setSuccess(successMsg || t("userProfile.profileUpdated"));
+      const updatedData = response?.data || response;
+
+      const successMsg =
+        typeof response.message === "object"
+          ? response.message[currentLang] || response.message.en || response.message.ar
+          : response.message;
+
+      setSuccess(successMsg || "تم تحديث البروفايل بنجاح");
       setEditMode(false);
       if (onUpdate) onUpdate();
+
       setFormData({
-        name: updatedProfile.name || formData.name,
-        phone: updatedProfile.phone || formData.phone,
+        name: updatedData.name || formData.name,
+        phone: updatedData.phone || formData.phone,
+        grade: updatedData.grade || formData.grade,
         image: null,
       });
-      setProfileImage(updatedProfile.image || null);
-      
+      setProfileImage(updatedData.image_url || updatedData.image || profileImage);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      const errorMsg = err.message || t("userProfile.updateError");
-      setError(errorMsg);
+      setError(err.message || "حدث خطأ أثناء التحديث");
       console.error("Submit error:", err);
     } finally {
       setLoading(false);
@@ -133,220 +129,231 @@ const EditProfile = ({ profile: initialProfile, onUpdate }) => {
     setError(null);
     setSuccess(false);
     setFormData({
-      name: initialProfile.name || "",
-      phone: initialProfile.phone || "",
+      name: initialProfile?.name || "",
+      phone: initialProfile?.phone || "",
+      grade: initialProfile?.grade || "الاول",
       image: null,
     });
-    setProfileImage(initialProfile.image || null);
+    setProfileImage(initialProfile?.image_url || initialProfile?.image || null);
   };
 
+  const genderDisplay = initialProfile?.gender === "male"
+    ? "ذكر"
+    : initialProfile?.gender === "female"
+    ? "أنثى"
+    : "—";
+
+  /* ─────────── VIEW MODE ─────────── */
   if (!editMode) {
     return (
-      <div className="mx-auto w-full p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-colors">
-          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
-              {t("userProfile.studentProfile")}
-            </h2>
-            <button
-              onClick={() => setEditMode(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+      <div className="w-full space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <FaGraduationCap className="text-primary" />
+            الملف الشخصي
+          </h2>
+          <button
+            onClick={() => setEditMode(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-secondary to-primary text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
+          >
+            <FiEdit2 size={14} />
+            تعديل
+          </button>
+        </div>
+
+        {success && (
+          <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl text-green-700 dark:text-green-300 text-sm">
+            ✅ {typeof success === "string" ? success : "تم التحديث بنجاح"}
+          </div>
+        )}
+        {error && (
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300 text-sm">
+            ❌ {error}
+          </div>
+        )}
+
+        {/* Avatar + Basic Info */}
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 p-5 bg-gradient-to-br from-secondary/5 to-primary/5 dark:from-secondary/10 dark:to-primary/10 rounded-2xl border border-primary/20">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary/30 shadow-lg flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            {profileImage ? (
+              <img src={profileImage} alt="صورة الملف" className="w-full h-full object-cover" />
+            ) : (
+              <FaUserCircle className="w-full h-full text-gray-300 dark:text-gray-500" />
+            )}
+          </div>
+          <div className="text-center sm:text-right flex-1">
+            <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white">
+              {initialProfile?.name || "—"}
+            </h3>
+            <p className="text-sm text-primary font-semibold mt-1">
+              {initialProfile?.email || "—"}
+            </p>
+            <span className="inline-block mt-2 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">
+              {gradeLabel(initialProfile?.grade)}
+            </span>
+          </div>
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { label: "الاسم الكامل", value: initialProfile?.name },
+            { label: "البريد الإلكتروني", value: initialProfile?.email },
+            { label: "رقم الهاتف", value: initialProfile?.phone },
+            { label: "الجنس", value: genderDisplay },
+            { label: "الصف الدراسي", value: gradeLabel(initialProfile?.grade), full: true },
+          ].map((field, i) => (
+            <div
+              key={i}
+              className={`p-4 bg-white dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm ${field.full ? "sm:col-span-2" : ""}`}
             >
-              <FaSave
-                className={`${i18n.language === "ar" ? "ml-2" : "mr-2"}`}
-                size={16}
-              />
-              {t("userProfile.edit")}
-            </button>
-          </div>
-
-          <div className="p-4 sm:p-6">
-            {error && (
-              <div className="mb-6 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md transition-colors">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="mb-6 p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-md transition-colors">
-                {typeof success === 'string' ? success : t("userProfile.profileUpdated")}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="col-span-1">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t("userProfile.name")}
-                </p>
-                <p className="text-gray-800 dark:text-gray-200 mt-1">{initialProfile?.name || formData.name || "N/A"}</p>
-              </div>
-              <div className="col-span-1">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t("userProfile.email")}
-                </p>
-                <p className="text-gray-800 dark:text-gray-200 mt-1">{initialProfile?.email || "N/A"}</p>
-              </div>
-              <div className="col-span-1">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t("userProfile.phone")}
-                </p>
-                <p className="text-gray-800 dark:text-gray-200 mt-1">{initialProfile?.phone || formData.phone || "N/A"}</p>
-              </div>
-              <div className="col-span-1">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t("userProfile.gender")}
-                </p>
-                <p className="text-gray-800 dark:text-gray-200 mt-1">
-                  {initialProfile?.gender === "male" 
-                    ? t("userProfile.male") 
-                    : initialProfile?.gender === "female" 
-                    ? t("userProfile.female") 
-                    : "N/A"}
-                </p>
-              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">{field.label}</p>
+              <p className="text-gray-800 dark:text-white font-semibold">
+                {field.value || "—"}
+              </p>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     );
   }
 
+  /* ─────────── EDIT MODE ─────────── */
   return (
-    <div className="mx-auto w-full p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-colors">
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
-            {t("userProfile.editStudentProfile")}
-          </h2>
-          <button
-            onClick={handleCancel}
-            className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            {t("userProfile.cancel")}
-          </button>
-        </div>
-
-        <div className="p-4 sm:p-6">
-          {success && (
-            <div className="mb-6 p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-md transition-colors">
-              {typeof success === 'string' ? success : t("userProfile.profileUpdated")}
-            </div>
-          )}
-          {error && (
-            <div className="mb-6 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md transition-colors">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="col-span-1 md:col-span-2">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                  {t("userProfile.profilePicture")}
-                </p>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="relative">
-                    <img
-                      src={profileImage || "/default-avatar.png"}
-                      alt="Profile"
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full shadow-md object-cover"
-                    />
-                    {profileImage && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                      >
-                        <FaTimes size={16} />
-                      </button>
-                    )}
-                  </div>
-                  <label className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-                    <FaCloudUploadAlt
-                      className={`${
-                        i18n.language === "ar" ? "ml-2" : "mr-2"
-                      }`}
-                      size={16}
-                    />
-                    {t("userProfile.change")}
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      disabled={loading}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("userProfile.name")}
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("userProfile.phone")}
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  disabled={loading}
-                  placeholder="01xxxxxxxxx"
-                  maxLength="11"
-                  className={`w-full px-3 py-2 border ${
-                    phoneError 
-                      ? 'border-red-500 dark:border-red-400' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  } rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors`}
-                />
-                {phoneError && (
-                  <p className="mt-1 text-sm text-red-500 dark:text-red-400">{phoneError}</p>
-                )}
-                {formData.phone && !phoneError && (
-                  <p className="mt-1 text-sm text-green-500 dark:text-green-400 flex items-center gap-1">
-                    ✓ رقم صحيح
-                  </p>
-                )}
-              </div>
-              <div className="col-span-1 md:col-span-2 mt-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex justify-center items-center px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
-                >
-                  {loading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin mr-2 h-5 w-5 border-t-2 border-b-2 border-white rounded-full"></div>
-                      {t("userProfile.saving")}
-                    </div>
-                  ) : (
-                    <>
-                      <FaSave
-                        className={`${
-                          i18n.language === "ar" ? "ml-2" : "mr-2"
-                        }`}
-                        size={16}
-                      />
-                      {t("userProfile.saveChanges")}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+    <div className="w-full space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <FiEdit2 className="text-primary" />
+          تعديل الملف الشخصي
+        </h2>
+        <button
+          onClick={handleCancel}
+          className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+        >
+          <FaTimes size={13} />
+          إلغاء
+        </button>
       </div>
+
+      {success && (
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl text-green-700 dark:text-green-300 text-sm">
+          ✅ {typeof success === "string" ? success : "تم التحديث بنجاح"}
+        </div>
+      )}
+      {error && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300 text-sm">
+          ❌ {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Profile Picture */}
+        <div className="flex flex-col sm:flex-row items-center gap-5 p-5 bg-gradient-to-br from-secondary/5 to-primary/5 dark:from-secondary/10 dark:to-primary/10 rounded-2xl border border-primary/20">
+          <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary/30 shadow-lg flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            {profileImage ? (
+              <img src={profileImage} alt="صورة الملف" className="w-full h-full object-cover" />
+            ) : (
+              <FaUserCircle className="w-full h-full text-gray-300 dark:text-gray-500" />
+            )}
+            {profileImage && (
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+              >
+                <FaTimes size={11} />
+              </button>
+            )}
+          </div>
+          <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-primary/40 text-primary text-sm rounded-xl hover:bg-primary/5 transition-all cursor-pointer font-medium">
+            <FaCloudUploadAlt size={16} />
+            تغيير الصورة
+            <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} disabled={loading} />
+          </label>
+        </div>
+
+        {/* Fields Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              الاسم الكامل <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              placeholder="ادخل اسمك الكامل"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+            />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              رقم الهاتف
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              disabled={loading}
+              placeholder="01xxxxxxxxx"
+              maxLength="11"
+              className={`w-full px-4 py-2.5 border rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all ${
+                phoneError ? "border-red-400 dark:border-red-500" : "border-gray-200 dark:border-gray-600"
+              }`}
+            />
+            {phoneError && <p className="mt-1 text-xs text-red-500">{phoneError}</p>}
+            {formData.phone && !phoneError && formData.phone.length === 11 && (
+              <p className="mt-1 text-xs text-green-500 flex items-center gap-1">✓ رقم صحيح</p>
+            )}
+          </div>
+
+          {/* Grade - Full Width */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              الصف الدراسي
+            </label>
+            <select
+              name="grade"
+              value={formData.grade}
+              onChange={handleChange}
+              disabled={loading}
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+            >
+              {GRADE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Submit */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-gradient-to-r from-secondary to-primary text-white font-bold rounded-xl hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <>
+              <div className="animate-spin h-5 w-5 border-t-2 border-b-2 border-white rounded-full" />
+              جاري الحفظ...
+            </>
+          ) : (
+            <>
+              <FaSave size={15} />
+              حفظ التغييرات
+            </>
+          )}
+        </button>
+      </form>
     </div>
   );
 };

@@ -35,6 +35,19 @@ function CardCourse() {
   const [showIntroModal, setShowIntroModal] = useState(false);
   const [selectedIntroVideo, setSelectedIntroVideo] = useState(null);
   const [selectedCourseTitle, setSelectedCourseTitle] = useState("");
+  const [gradeFilter, setGradeFilter] = useState("all");
+
+  const GRADE_MAP = {
+    "الاول": "أولى ثانوي",
+    "الثاني": "تانية ثانوي",
+    "الثالث": "تالتة ثانوي",
+  };
+
+  const GRADE_COLORS = {
+    "الاول": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    "الثاني": "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+    "الثالث": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  };
 
   useEffect(() => {
     const fetchFavorites = async () => {
@@ -180,6 +193,7 @@ function CardCourse() {
     },
   };
 
+
   if (loading) return <Loader />;
   if (error)
     return (
@@ -187,6 +201,20 @@ function CardCourse() {
         {t("cardCourse.error")}
       </div>
     );
+
+  const gradeFilterOptions = [
+    { value: "all", label: "كل الصفوف" },
+    { value: "الاول", label: "أولى ثانوي" },
+    { value: "الثاني", label: "تانية ثانوي" },
+    { value: "الثالث", label: "تالتة ثانوي" },
+  ];
+
+  const filteredCourses = courses.filter(course => {
+    if (!course.grade) return true;
+    if (gradeFilter !== "all") return course.grade === gradeFilter;
+    return true;
+  });
+
 
   return (
     <>
@@ -228,14 +256,38 @@ function CardCourse() {
         </div>
       )}
 
-      <div className="container mx-auto py-12 px-4">
+      <div className="container mx-auto py-8 px-4">
+        {/* Grade Filter Tabs */}
+        <div className="flex flex-wrap gap-2 mb-8 justify-center">
+          {gradeFilterOptions.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setGradeFilter(opt.value)}
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
+                gradeFilter === opt.value
+                  ? "bg-gradient-to-r from-secondary to-primary text-white shadow-md scale-105"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-primary hover:text-primary"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {filteredCourses.length === 0 && (
+          <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+            <div className="text-5xl mb-4">📚</div>
+            <p className="text-lg font-semibold">لا توجد دورات لهذا الصف حتى الآن</p>
+          </div>
+        )}
+
         <motion.div
           className={`grid grid-cols-1 md:grid-cols-3 3xl:grid-cols-4 gap-6`}
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          {courses.map((course, index) => (
+          {filteredCourses.map((course, index) => (
             <motion.div
               key={course.id}
               variants={cardVariants}
@@ -276,14 +328,18 @@ function CardCourse() {
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.3 }}
               />
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 text-xs font-medium px-2.5 py-0.5 rounded">
-                    {course.level}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {course.language}
-                  </span>
+              <div className="p-5">
+                <div className="flex justify-between items-center mb-3">
+                  {course.grade ? (
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${GRADE_COLORS[course.grade] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+                      {GRADE_MAP[course.grade] || course.grade}
+                    </span>
+                  ) : (
+                    <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full">
+                      كل الصفوف
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{course.language}</span>
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">{course.title}</h3>
                 <div className="flex items-center mb-3">
