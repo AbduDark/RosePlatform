@@ -40,7 +40,7 @@ const PopularCoursesSection = () => {
         >
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/15 text-teal-700 dark:text-primary text-sm font-semibold mb-3">
             <FaGraduationCap className="text-lg text-primary" />
-            <span>كورسات المراحل الدراسية</span>
+            <span>دورات المراحل الدراسية</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 text-gray-900 dark:text-white">
             {t("popularCourses.title")}

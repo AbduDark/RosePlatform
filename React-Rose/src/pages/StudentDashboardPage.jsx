@@ -127,42 +127,44 @@ const StudentDashboardPage = () => {
   )?.component;
 
   return (
-    <section className="relative pb-8">
-      <div className="h-28 bg-gradient-to-r from-secondary to-primary"></div>
-      {/* Profile Head */}
-      <div className="-mt-8 mb-6">
+    <section className={`relative pb-12 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors ${i18next.language === "ar" ? "font-arabic" : "font-sans"}`}>
+      {/* Top Banner Gradient */}
+      <div className="h-36 bg-gradient-to-r from-secondary via-blue-700 to-teal-800 relative">
+        <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px]" />
+      </div>
+
+      {/* Profile Head Card */}
+      <div className="-mt-14 mb-8 relative z-10">
         <div className="container mx-auto px-4">
-          <div className="bg-transparent shadow-none">
-            <div className="flex flex-wrap items-center">
-              <div className="w-auto">
-                <div
-                  className={`w-32 h-32 rounded-full bg-white p-1 border-4 border-gray-300 overflow-hidden ${
-                    i18next.language === "ar" ? "ml-4" : "mr-4"
-                  }`}
-                >
-                  {profile?.image ? (
-                    <img
-                      src={profile.image}
-                      alt={profile.name || "User"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <FaUserCircle className="w-full h-full text-gray-400" />
-                  )}
-                </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white p-1 border-4 border-primary/40 shadow-md overflow-hidden flex-shrink-0">
+                {profile?.image ? (
+                  <img
+                    src={profile.image}
+                    alt={profile.name || "User"}
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => { e.target.style.display = "none"; }}
+                  />
+                ) : (
+                  <FaUserCircle className="w-full h-full text-gray-300 dark:text-gray-600" />
+                )}
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
+              <div className="flex-1 min-w-0 text-center sm:text-start">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-3xl font-bold mt-2 md:mt-0 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-800 dark:from-white dark:to-gray-200">
-                      {profile.name || "User"}
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+                      {profile.name || "المستخدم"}
                     </h2>
+                    <p className="text-sm text-primary font-semibold mt-1">
+                      {profile.email || "طالب ثانوية عامة"}
+                    </p>
                   </div>
-                  <div className="md:hidden">
+                  <div className="md:hidden self-center sm:self-start">
                     <button
                       onClick={toggleMenu}
-                      className="p-2 -mt-6 text-white bg-white/20 rounded-full hover:bg-white/30"
+                      className="p-2.5 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 transition-all"
                     >
                       {menuOpen ? (
                         <FiX className="w-5 h-5" />
@@ -184,41 +186,38 @@ const StudentDashboardPage = () => {
           {/* Sidebar Navigation */}
           {menuOpen && (
             <div className="w-full md:w-1/4 px-3 mb-6">
-              <div className="rounded-lg bg-gradient-to-r from-secondary to-primary p-4 shadow-lg">
+              <div className="rounded-2xl bg-white dark:bg-gray-800 p-3 shadow-xl border border-gray-100 dark:border-gray-700">
                 <nav>
-                  <ul className="space-y-1">
-                    {menuItems.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          onClick={() => handleTabChange(item)}
-                          className={`w-full flex items-center p-[11px] rounded transition-colors ${
-                            activeTab === item.id
-                              ? "bg-white text-gray-900"
-                              : "text-white hover:bg-white/20"
-                          }`}
-                        >
-                          <span
-                            className={`${
-                              i18next.language === "ar" ? "ml-3" : "mr-3"
-                            } ${
-                              activeTab === item.id
-                                ? "text-primary"
-                                : "text-white"
+                  <ul className="space-y-1.5">
+                    {menuItems.map((item) => {
+                      const isActive = activeTab === item.id;
+                      return (
+                        <li key={item.id}>
+                          <button
+                            onClick={() => handleTabChange(item)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+                              isActive
+                                ? "bg-gradient-to-r from-secondary to-primary text-white shadow-md"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60"
                             }`}
                           >
-                            {item.icon}
-                          </span>
-                          <span className="font-semibold">{item.label}</span>
-                        </button>
-                      </li>
-                    ))}
+                            <span className={isActive ? "text-white" : "text-primary"}>
+                              {item.icon}
+                            </span>
+                            <span>{item.label}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </nav>
               </div>
             </div>
           )}
-          <div className={`px-2 ${menuOpen ? "w-full md:w-3/4" : "w-full"}`}>
-            {ActiveComponent || <p className="text-gray-700 dark:text-gray-300">{t("studentDashboard.selectTabToView")}</p>}
+          <div className={`px-3 ${menuOpen ? "w-full md:w-3/4" : "w-full"}`}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-gray-700 min-h-[400px]">
+              {ActiveComponent || <p className="text-gray-700 dark:text-gray-300">{t("studentDashboard.selectTabToView")}</p>}
+            </div>
           </div>
         </div>
       </div>

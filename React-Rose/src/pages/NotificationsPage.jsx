@@ -145,17 +145,17 @@ const NotificationsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-colors">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center">
-              <div className="flex items-center">
+              <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {t("notifications.title")}
                 </h1>
                 {unreadCount > 0 && (
-                  <span className="ml-2 bg-blue-800 dark:bg-primary text-white text-sm font-bold px-3 py-1 rounded-full">
+                  <span className="bg-primary text-gray-950 text-xs font-extrabold px-3 py-1 rounded-full shadow-sm">
                     {unreadCount}
                   </span>
                 )}
@@ -163,7 +163,7 @@ const NotificationsPage = () => {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-blue-600 dark:text-primary hover:text-blue-800 dark:hover:text-secondary transition-colors font-medium"
+                  className="text-primary hover:text-secondary transition-colors font-bold text-sm"
                 >
                   {t("notifications.markAllAsRead")}
                 </button>
@@ -171,14 +171,14 @@ const NotificationsPage = () => {
             </div>
           </div>
 
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="text-6xl mb-4">🔔</div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <div className="p-12 text-center">
+                <div className="text-5xl mb-4">🔔</div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                   {t("notifications.noNotifications")}
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
                   {t("notifications.noNotificationsDescription")}
                 </p>
               </div>
@@ -186,47 +186,47 @@ const NotificationsPage = () => {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-6 transition-all hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    !notification.is_read ? "bg-blue-50 dark:bg-gray-700/50" : "bg-white dark:bg-gray-800"
+                  className={`p-5 transition-all hover:bg-gray-50 dark:hover:bg-gray-700/60 ${
+                    !notification.is_read ? "bg-primary/5 dark:bg-primary/10 border-s-4 border-primary" : "bg-white dark:bg-gray-800"
                   }`}
                 >
-                  <div className="flex items-start space-x-4">
+                  <div className="flex items-start gap-4">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-lg">
+                      <div className="w-10 h-10 bg-primary/15 text-primary rounded-xl flex items-center justify-center text-xl shadow-sm">
                         {getNotificationIcon(notification.type)}
                       </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          <p className="text-base font-bold text-gray-900 dark:text-white">
                             {notification.title}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
                             {notification.message}
                           </p>
                           {notification.course && (
-                            <p className="text-sm text-blue-600 dark:text-primary mt-1">
+                            <p className="text-xs font-semibold text-primary mt-1.5">
                               {t("notifications.course")}:{" "}
                               {notification.course.title}
                             </p>
                           )}
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                             {formatDate(notification.created_at)}
                           </p>
                         </div>
 
                         {!notification.is_read && (
-                          <span className="inline-block w-2 h-2 bg-red-500 rounded-full ml-2"></span>
+                          <span className="inline-block w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0 mt-1.5 animate-pulse" />
                         )}
                       </div>
 
-                      <div className="mt-4 flex space-x-3">
+                      <div className="mt-3 flex items-center gap-4 text-xs font-semibold">
                         {!notification.is_read && (
                           <button
                             onClick={() => handleMarkAsRead(notification.id)}
-                            className="text-sm text-blue-600 dark:text-primary hover:text-blue-800 dark:hover:text-secondary font-medium transition-colors"
+                            className="text-primary hover:underline transition-all"
                           >
                             {t("notifications.markAsRead")}
                           </button>
@@ -235,14 +235,14 @@ const NotificationsPage = () => {
                           onClick={() =>
                             handleDeleteNotification(notification.id)
                           }
-                          className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-500 font-medium transition-colors"
+                          className="text-red-500 hover:text-red-700 transition-all"
                         >
                           {t("notifications.delete")}
                         </button>
                         {notification.data?.url && (
                           <Link
                             to={notification.data.url}
-                            className="text-sm text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-500 font-medium transition-colors"
+                            className="text-secondary hover:underline transition-all"
                           >
                             {t("notifications.viewDetails")}
                           </Link>

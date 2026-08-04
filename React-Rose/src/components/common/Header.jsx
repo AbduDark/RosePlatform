@@ -408,69 +408,85 @@ const Header = () => {
                 )}
                 <AnimatePresence>
                   {isUserDropdownOpen && (
-                    <motion.ul
+                    <motion.div
                       variants={dropdownVariants}
                       initial="hidden"
                       animate="visible"
                       exit="exit"
-                      className="dropdown-menu absolute right-0 top-12 mt-2 w-56 bg-white dark:bg-gray-800 shadow-xl rounded-lg py-2 z-50 border border-gray-200 dark:border-gray-700"
+                      className={`absolute top-12 mt-2 w-64 bg-white dark:bg-gray-800 shadow-2xl rounded-2xl overflow-hidden z-50 border border-gray-100 dark:border-gray-700 ${
+                        i18n.language === "ar" ? "left-0" : "right-0"
+                      }`}
                     >
-                      <li>
-                        <h4 className="px-4 py-2 text-sm font-bold text-center text-gray-700 dark:text-gray-200">
-                          {user?.name || "User"}
-                        </h4>
-                      </li>
-                      <li>
-                        <hr className="my-1 border-gray-200 dark:border-gray-700" />
-                      </li>
-                      {user?.role === "student" ? (
-                        <>
-                          <motion.li whileHover={{ x: 5 }}>
+                      {/* User Header Card */}
+                      <div className="p-4 bg-gradient-to-r from-secondary to-primary text-white">
+                        <div className="flex items-center gap-3">
+                          {user?.image ? (
+                            <img
+                              src={user.image.startsWith("http") ? user.image : `${import.meta.env.VITE_API_BASE?.replace("/api", "")}/storage/${user.image}`}
+                              alt={user.name}
+                              className="w-11 h-11 rounded-full object-cover border-2 border-white/40 shadow-sm flex-shrink-0"
+                              onError={(e) => { e.target.style.display = "none"; }}
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center font-bold text-lg border border-white/30 flex-shrink-0">
+                              {(user?.name || "U")[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="overflow-hidden">
+                            <h4 className="font-bold text-sm text-white truncate">
+                              {user?.name || "المستخدم"}
+                            </h4>
+                            <p className="text-xs text-teal-100 truncate mt-0.5">
+                              {user?.email || (user?.role === "admin" ? "مدير النظام" : "طالب ثانوية عامة")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dropdown Menu Items */}
+                      <div className="py-2 px-1">
+                        {user?.role === "student" ? (
+                          <>
                             <Link
                               to="/student-dashboard/subscriptions"
-                              className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-all duration-200"
                               onClick={() => setIsUserDropdownOpen(false)}
                             >
-                              <MdSubscriptions className="mr-3" />
-                              {t("header.subscriptions")}
+                              <MdSubscriptions className="text-lg text-primary" />
+                              <span>{t("header.subscriptions")}</span>
                             </Link>
-                          </motion.li>
-                          <motion.li whileHover={{ x: 5 }}>
+
                             <Link
                               to="/student-dashboard/profile"
-                              className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-all duration-200"
                               onClick={() => setIsUserDropdownOpen(false)}
                             >
-                              <FaUser className="mr-3" />
-                              {t("header.profile")}
+                              <FaUser className="text-lg text-primary" />
+                              <span>{t("header.profile")}</span>
                             </Link>
-                          </motion.li>
-                        </>
-                      ) : (
-                        <motion.li whileHover={{ x: 5 }}>
+                          </>
+                        ) : (
                           <Link
                             to="/admin/overview"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-all duration-200"
                             onClick={() => setIsUserDropdownOpen(false)}
                           >
-                            <MdSubscriptions className="mr-3" />
-                            {t("header.dashboard")}
+                            <MdSubscriptions className="text-lg text-primary" />
+                            <span>{t("header.dashboard")}</span>
                           </Link>
-                        </motion.li>
-                      )}
-                      <li>
-                        <hr className="my-1 border-gray-200 dark:border-gray-700" />
-                      </li>
-                      <motion.li whileHover={{ x: 5 }}>
+                        )}
+
+                        <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+
                         <button
                           onClick={handleLogout}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
                         >
-                          <FaSignOutAlt className="mr-3" />
-                          {t("header.logout")}
+                          <FaSignOutAlt className="text-lg" />
+                          <span>{t("header.logout")}</span>
                         </button>
-                      </motion.li>
-                    </motion.ul>
+                      </div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </div>
