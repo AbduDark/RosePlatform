@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FaArrowRight, FaSignInAlt, FaPlay } from "react-icons/fa";
+import { FaArrowRight, FaSignInAlt } from "react-icons/fa";
 import HeaderImg from "../../assets/images/intro-art.svg";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
