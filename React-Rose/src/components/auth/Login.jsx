@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import studyImage from "../../assets/images/study.svg";
+import { FaExclamationTriangle, FaInfoCircle } from "react-icons/fa";
 
 const Login = () => {
   const { login } = useAuth();
@@ -11,8 +12,18 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [kickBanner, setKickBanner] = useState(null); // null | "kicked" | "expired"
 
   const isRTL = i18n.dir() === 'rtl';
+
+  // Check if user was kicked by another device login
+  useEffect(() => {
+    const reason = localStorage.getItem("session_kick_reason");
+    if (reason) {
+      setKickBanner(reason);
+      localStorage.removeItem("session_kick_reason");
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,6 +59,30 @@ const Login = () => {
                   {t("auth.login.signup")}
                 </Link>
               </p>
+
+              {/* Session kick banner */}
+              {kickBanner === "kicked" && (
+                <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-xl flex items-start gap-3">
+                  <FaExclamationTriangle className="text-orange-500 text-xl flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-orange-700 dark:text-orange-300 font-semibold text-sm">
+                      {t("auth.login.kickedTitle", { defaultValue: "تم تسجيل الخروج تلقائياً" })}
+                    </p>
+                    <p className="text-orange-600 dark:text-orange-400 text-xs mt-1">
+                      {t("auth.login.kickedMessage", { defaultValue: "تم تسجيل الدخول إلى حسابك من جهاز آخر، لذا تم إنهاء جلستك الحالية. إذا لم تكن أنت، يُرجى تغيير كلمة المرور فوراً." })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {kickBanner === "expired" && (
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl flex items-start gap-3">
+                  <FaInfoCircle className="text-blue-500 text-xl flex-shrink-0 mt-0.5" />
+                  <p className="text-blue-700 dark:text-blue-300 text-sm">
+                    {t("auth.login.sessionExpiredMessage", { defaultValue: "انتهت صلاحية جلستك. يُرجى تسجيل الدخول مرة أخرى." })}
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

@@ -19,29 +19,40 @@ export const AuthProvider = ({ children }) => {
   );
   const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [sessionExpired, setSessionExpired] = useState(false);
+  // "kicked" = طرد بسبب دخول من جهاز آخر | "expired" = انتهاء الجلسة
+  const [sessionKickReason, setSessionKickReason] = useState(null);
+
+  const clearAuthStorage = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  };
 
   const handleLogin = async (email, password) => {
     try {
-      // Get device identifier and info
+      // Clear any previous kick reason before new login attempt
+      localStorage.removeItem("session_kick_reason");
+
       const deviceId = getDeviceIdentifier();
       const deviceInfo = getDeviceInfo();
-      
+
       const res = await login(email, password, deviceId, deviceInfo);
-      
-      // Safely extract user and token supporting both wrapped (res.data) and direct (res) structures
+
       const payload = res?.data || res;
       const currentUser = payload?.user;
       const userToken = payload?.token;
 
       if (!currentUser) {
-        const errorMsg = typeof res?.message === 'object' 
-          ? (res.message.ar || res.message.en) 
-          : (res?.message || "فشل تسجيل الدخول: لم يتم استلام بيانات المستخدم");
+        const errorMsg =
+          typeof res?.message === "object"
+            ? res.message.ar || res.message.en
+            : res?.message || "فشل تسجيل الدخول: لم يتم استلام بيانات المستخدم";
         throw new Error(errorMsg);
       }
 
       setUser(currentUser);
       setToken(userToken);
+      setSessionExpired(false);
+      setSessionKickReason(null);
       localStorage.setItem("user", JSON.stringify(currentUser));
       if (userToken) {
         localStorage.setItem("token", userToken);
@@ -64,47 +75,71 @@ export const AuthProvider = ({ children }) => {
     await logout(token);
     setUser(null);
     setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    setSessionExpired(false);
+    setSessionKickReason(null);
+    clearAuthStorage();
     navigate("/auth/login");
   };
 
-  const handleSessionExpired = () => {
+  /**
+   * Called when the server returns 401 on an authenticated request.
+   * reason: "kicked" | "expired"
+   */
+  const handleSessionExpired = (reason = "expired") => {
     setSessionExpired(true);
+    setSessionKickReason(reason);
     setUser(null);
     setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    
-    // Show notification and redirect after delay
+    clearAuthStorage();
+    // Persist reason so the login page can read it on mount
+    localStorage.setItem("session_kick_reason", reason);
+
     setTimeout(() => {
       navigate("/auth/login");
     }, 100);
   };
 
-  // Setup global auth interceptor
+  // Setup global fetch interceptor for 401 responses
   useEffect(() => {
-    const handleUnauthorized = () => {
-      if (token) {
-        handleSessionExpired();
-      }
-    };
-
-    // Intercept unauthorized responses
     const originalFetch = window.fetch;
+
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
-      
-      if (response.status === 401) {
+
+      if (response.status === 401 && token) {
         const url = args[0];
         const API_BASE = import.meta.env.VITE_API_BASE;
-        
-        // Only trigger on API calls, not on login
-        if (typeof url === 'string' && url.includes(API_BASE) && !url.includes('/auth/login')) {
-          handleUnauthorized();
+
+        // Only intercept our API calls, not login itself
+        if (
+          typeof url === "string" &&
+          url.includes(API_BASE) &&
+          !url.includes("/auth/login")
+        ) {
+          // Try to read error body to distinguish "kicked" vs "expired"
+          try {
+            const cloned = response.clone();
+            const body = await cloned.json().catch(() => ({}));
+            const msg =
+              typeof body?.message === "object"
+                ? body.message.ar || body.message.en || ""
+                : body?.message || "";
+
+            // Check if it's a "kicked by another device" scenario
+            const isKicked =
+              msg.includes("جهاز") ||
+              msg.includes("device") ||
+              msg.includes("kicked") ||
+              msg.includes("another") ||
+              msg.includes("session");
+
+            handleSessionExpired(isKicked ? "kicked" : "expired");
+          } catch {
+            handleSessionExpired("expired");
+          }
         }
       }
-      
+
       return response;
     };
 
@@ -130,6 +165,7 @@ export const AuthProvider = ({ children }) => {
     logout: handleLogout,
     setAuthData,
     sessionExpired,
+    sessionKickReason,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
