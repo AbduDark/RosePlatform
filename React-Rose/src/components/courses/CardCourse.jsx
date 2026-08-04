@@ -239,77 +239,101 @@ function CardCourse() {
             <motion.div
               key={course.id}
               variants={cardVariants}
-              whileHover={{ y: -8, scale: 1.02 }}
-              transition={{ duration: 0.3 }}
               onClick={() => handleCourseClick(course.id)}
-              className="bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md hover:shadow-xl dark:shadow-gray-900 cursor-pointer relative border border-transparent dark:border-gray-600"
+              className="group relative rounded-3xl overflow-hidden cursor-pointer border border-slate-800 bg-slate-900/60 backdrop-blur-sm hover:border-purple-500/40 hover:shadow-2xl hover:shadow-purple-900/20 transition-all duration-300 flex flex-col"
+              whileHover={{ y: -6 }}
+              transition={{ duration: 0.3 }}
             >
-              <div className="absolute top-3 right-3 z-10 flex gap-2">
-                {course.intro_video_url && course.intro_video_url.trim() !== '' && (
+              {/* Course Image with Overlay */}
+              <div className="relative h-52 overflow-hidden">
+                <motion.img
+                  src={course.image_url || ImageNotFound}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                  whileHover={{ scale: 1.07 }}
+                  transition={{ duration: 0.4 }}
+                />
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
+
+                {/* Top Action Buttons */}
+                <div className="absolute top-3 end-3 z-10 flex gap-2">
+                  {course.intro_video_url && course.intro_video_url.trim() !== '' && (
+                    <motion.button
+                      onClick={(e) => handleShowIntro(e, course.intro_video_url, course.title)}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-2 rounded-xl bg-purple-600/90 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/50 transition-all"
+                      title={t("introVideo.watchIntro") || "شاهد المقدمة"}
+                    >
+                      <FiPlay className="w-4 h-4" />
+                    </motion.button>
+                  )}
                   <motion.button
-                    onClick={(e) => handleShowIntro(e, course.intro_video_url, course.title)}
-                    whileHover={{ scale: 1.15 }}
+                    onClick={(e) => handleToggleFavorite(e, course.id)}
+                    disabled={favoriteLoading[course.id]}
+                    whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className="p-2 rounded-full bg-blue-500/90 hover:bg-blue-600 text-white transition-all shadow-lg"
-                    title={t("introVideo.watchIntro") || "شاهد المقدمة"}
+                    className={`p-2 rounded-xl bg-slate-900/80 backdrop-blur-sm border border-slate-700 hover:border-rose-500/50 transition-all ${
+                      token && favoriteCourseIds.includes(course.id) ? "text-rose-500" : "text-slate-400 hover:text-rose-400"
+                    } ${favoriteLoading[course.id] ? "opacity-50" : ""}`}
                   >
-                    <FiPlay className="w-5 h-5" />
+                    <FiHeart className={`w-4 h-4 ${token && favoriteCourseIds.includes(course.id) ? "fill-current" : ""}`} />
                   </motion.button>
-                )}
-                <motion.button
-                  onClick={(e) => handleToggleFavorite(e, course.id)}
-                  disabled={favoriteLoading[course.id]}
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  className={`p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 transition-all ${
-                    token && favoriteCourseIds.includes(course.id) ? "text-red-500" : "text-gray-400 dark:text-gray-300"
-                  } ${favoriteLoading[course.id] ? "opacity-50" : ""}`}
-                  title={token && favoriteCourseIds.includes(course.id) ? t("favorites.removeFromFavorites") || "إزالة من المفضلة" : t("favorites.addToFavorites") || "إضافة للمفضلة"}
-                >
-                  <FiHeart className={`w-5 h-5 ${token && favoriteCourseIds.includes(course.id) ? "fill-current" : ""}`} />
-                </motion.button>
-              </div>
-              <motion.img
-                src={course.image_url || ImageNotFound}
-                alt={course.title}
-                className="w-full h-48 object-cover"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.3 }}
-              />
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 text-xs font-medium px-2.5 py-0.5 rounded">
+                </div>
+
+                {/* Bottom price/level badge */}
+                <div className="absolute bottom-3 start-3 flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-600/80 text-purple-100 border border-purple-500/40 backdrop-blur-sm">
                     {course.level}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {course.language}
+                  {course.price == 0 ? (
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/80 text-emerald-100 border border-emerald-400/40 backdrop-blur-sm">
+                      {i18next.language === 'ar' ? 'مجاني' : 'Free'}
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/80 text-amber-100 border border-amber-400/40 backdrop-blur-sm">
+                      {i18next.language === 'ar' ? 'مدفوع' : 'Paid'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-5 flex flex-col flex-1">
+                {/* Stars */}
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="flex items-center gap-0.5">{renderStars(course.avg_rating)}</div>
+                  <span className="text-slate-400 text-xs font-medium">
+                    {course.avg_rating ? `${course.avg_rating}/5` : (i18next.language === 'ar' ? 'لا يوجد تقييم' : 'No rating')}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">{course.title}</h3>
-                <div className="flex items-center mb-3">
-                  {renderStars(course.avg_rating)}
-                  <span className="text-gray-600 dark:text-gray-300 text-sm ml-2">
-                    {course.avg_rating ? `${course.avg_rating}/5` : ""}
-                  </span>
-                </div>
-                <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+
+                {/* Title */}
+                <h3 className="text-lg font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2 mb-2">
+                  {course.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-slate-400 text-sm leading-relaxed line-clamp-2 mb-4 flex-1">
                   {course.description}
                 </p>
-                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                  <span className="flex items-center">
-                    <FaClock
-                      className={`text-red-500 dark:text-red-400 ${
-                        i18next.language === "ar" ? "ml-1" : "mr-1"
-                      }`}
-                    />
-                    {course.duration_hours} {t("cardCourse.hours")}
+
+                {/* Footer */}
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <FaClock className="text-purple-400" />
+                      {course.duration_hours} {t("cardCourse.hours")}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-emerald-400">▶</span>
+                      {course.lessons_count} {t("cardCourse.lessons")}
+                    </span>
+                  </div>
+                  <span className="text-xs text-purple-400 font-medium truncate max-w-24">
+                    {course.instructor_name}
                   </span>
-                  <span>
-                    {course.lessons_count} {t("cardCourse.lessons")}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                  {t("cardCourse.instructor")}: {course.instructor_name}
                 </div>
               </div>
             </motion.div>
