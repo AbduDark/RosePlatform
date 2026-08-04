@@ -37,9 +37,8 @@ const IntroSection = () => {
   return (
     <section
       id="intro-section"
-      className={`w-full pt-10 md:pt-14 bg-gradient-to-r from-secondary via-blue-700 to-teal-800 dark:from-gray-950 dark:via-gray-900 dark:to-teal-950 text-white relative overflow-hidden ${
-        isRTL ? "font-arabic" : "font-sans"
-      }`}
+      className={`w-full pt-10 md:pt-14 bg-gradient-to-r from-secondary via-blue-700 to-teal-800 dark:from-gray-950 dark:via-gray-900 dark:to-teal-950 text-white relative overflow-hidden ${isRTL ? "font-arabic" : "font-sans"
+        }`}
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Background Ambient Glow */}
@@ -157,7 +156,7 @@ const IntroSection = () => {
                 />
 
                 {/* Floating Chemistry Badge 1 */}
-                <div className="absolute top-4 left-4 bg-gray-950/85 backdrop-blur-md border border-primary/40 text-white p-2.5 rounded-xl shadow-lg flex items-center gap-2.5">
+                {/* <div className="absolute top-4 left-4 bg-gray-950/85 backdrop-blur-md border border-primary/40 text-white p-2.5 rounded-xl shadow-lg flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-base">
                     🧪
                   </div>
@@ -165,7 +164,7 @@ const IntroSection = () => {
                     <div className="text-[11px] text-gray-400">متخصصون في</div>
                     <div className="text-xs font-bold text-white">كيمياء الثانوية العامة</div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Floating Chemistry Badge 2 */}
                 <div className="absolute bottom-5 right-4 bg-gray-950/85 backdrop-blur-md border border-secondary/40 text-white p-2.5 rounded-xl shadow-lg flex items-center gap-2.5">
