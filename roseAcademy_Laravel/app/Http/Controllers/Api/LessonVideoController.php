@@ -855,15 +855,19 @@ public function upload(Request $request, $lessonId)
 
     /**
      * Ensure HLS playlist exists for the lesson.
-     * If the lesson is still an MP4 file, fast-remux it to HLS on demand.
+     * If the lesson is still an MP4 file or has broken HLS files, convert it to HLS.
      */
     private function ensureHlsPlaylist(Lesson $lesson): ?string
     {
         $hlsDir = storage_path("app/hls/lesson_{$lesson->id}");
         $playlistPath = $hlsDir . '/playlist.m3u8';
 
-        if (file_exists($playlistPath) && filesize($playlistPath) > 0) {
-            return $playlistPath;
+        // Check if a valid playlist AND first segment exist
+        if (file_exists($playlistPath) && filesize($playlistPath) > 50) {
+            $firstSegment = $hlsDir . '/segment_000.ts';
+            if (file_exists($firstSegment) && filesize($firstSegment) > 1000) {
+                return $playlistPath;
+            }
         }
 
         // Locate source video file
@@ -876,15 +880,18 @@ public function upload(Request $request, $lessonId)
             return null;
         }
 
-        if (!is_dir($hlsDir)) {
+        // Clean up old broken files if any
+        if (is_dir($hlsDir)) {
+            array_map('unlink', glob("$hlsDir/*.*"));
+        } else {
             @mkdir($hlsDir, 0755, true);
         }
 
         $segmentPattern = $hlsDir . '/segment_%03d.ts';
 
         if (function_exists('exec')) {
-            Log::info("⚡ Fast HLS remuxing for lesson {$lesson->id}...");
-            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -codec:v copy -codec:a copy -hls_time 6 -hls_playlist_type vod -hls_segment_filename " . escapeshellarg($segmentPattern) . " " . escapeshellarg($playlistPath) . " 2>&1";
+            Log::info("⚙️ Converting video to standard HLS for lesson {$lesson->id}...");
+            $command = "ffmpeg -y -threads 2 -i " . escapeshellarg($sourcePath) . " -codec:v libx264 -crf 23 -preset faster -codec:a aac -b:a 128k -hls_time 6 -hls_playlist_type vod -hls_segment_filename " . escapeshellarg($segmentPattern) . " " . escapeshellarg($playlistPath) . " 2>&1";
             
             $output = [];
             $returnVar = -1;
@@ -896,10 +903,10 @@ public function upload(Request $request, $lessonId)
                     'video_path'   => $relativePath,
                     'video_status' => 'ready',
                 ]);
-                Log::info("✅ Fast HLS remuxing completed for lesson {$lesson->id}");
+                Log::info("✅ HLS conversion completed for lesson {$lesson->id}");
                 return $playlistPath;
             } else {
-                Log::warning("⚠️ Fast HLS remuxing failed for lesson {$lesson->id}: " . implode("\n", array_slice($output, -3)));
+                Log::warning("⚠️ HLS conversion failed for lesson {$lesson->id}: " . implode("\n", array_slice($output, -5)));
             }
         }
 
