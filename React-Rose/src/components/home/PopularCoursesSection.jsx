@@ -38,8 +38,8 @@ const PopularCoursesSection = () => {
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
         >
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-semibold mb-3">
-            <FaGraduationCap className="text-lg" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/15 text-teal-700 dark:text-primary text-sm font-semibold mb-3">
+            <FaGraduationCap className="text-lg text-primary" />
             <span>كورسات المراحل الدراسية</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 text-gray-900 dark:text-white">
@@ -63,7 +63,7 @@ const PopularCoursesSection = () => {
         >
           <Link
             to="/courses"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-rose-600 to-indigo-600 text-white px-8 py-3.5 text-lg font-bold shadow-lg hover:shadow-rose-500/25 hover:scale-105 transition-all duration-300"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-secondary to-primary text-white font-bold px-8 py-3.5 text-lg shadow-lg hover:shadow-primary/25 hover:scale-105 transition-all duration-300"
           >
             <span>{t("popularCourses.more")}</span>
             <FaArrowRight className={isRTL ? "rotate-180" : ""} />

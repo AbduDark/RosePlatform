@@ -146,7 +146,7 @@ const ReviewSection = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-black to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
             {t("reviewSection.title")}
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -202,7 +202,7 @@ const ReviewSection = () => {
                               onError={(e) => { e.target.onerror = null; e.target.src = ImageNotFound; }}
                             />
                           ) : (
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-md mr-4 flex-shrink-0">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-gray-950 text-xl font-bold shadow-md mr-4 flex-shrink-0">
                               {getInitials(name)}
                             </div>
                           )}

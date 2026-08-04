@@ -37,14 +37,14 @@ const IntroSection = () => {
   return (
     <section
       id="intro-section"
-      className={`w-full pt-12 md:pt-16 bg-gradient-to-br from-indigo-900 via-purple-900 to-rose-950 dark:from-gray-950 dark:via-gray-900 dark:to-slate-950 text-white relative overflow-hidden ${
+      className={`w-full pt-12 md:pt-16 bg-gradient-to-r from-secondary via-blue-700 to-teal-800 dark:from-gray-950 dark:via-gray-900 dark:to-teal-950 text-white relative overflow-hidden ${
         isRTL ? "font-arabic" : "font-['Heebo']"
       }`}
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Glow effects in background */}
-      <div className="absolute top-1/4 -right-20 w-80 h-80 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/3 -left-20 w-80 h-80 bg-yellow-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -right-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/3 -left-20 w-80 h-80 bg-secondary/30 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex flex-col lg:flex-row justify-between items-center">
@@ -58,9 +58,9 @@ const IntroSection = () => {
             {/* Egyptian Chemistry Badge */}
             <motion.div
               variants={itemVariants}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-yellow-300 text-sm font-semibold mb-6 shadow-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-primary/40 text-primary text-sm font-semibold mb-6 shadow-lg"
             >
-              <FaFlask className="text-yellow-400 animate-pulse text-base" />
+              <FaFlask className="text-primary animate-pulse text-base" />
               <span>{t("introSection.badge", { defaultValue: "🧪 المنصة المتخصصة الأولى في الكيمياء للثانوية العامة" })}</span>
             </motion.div>
 
@@ -71,11 +71,11 @@ const IntroSection = () => {
             >
               {isRTL ? (
                 <>
-                  تقفيل <span className="text-yellow-400 underline decoration-rose-500 decoration-wavy">الكيمياء</span> أسهل مما تتخيل مع روز أكاديمي 🌹
+                  تقفيل <span className="text-primary underline decoration-secondary decoration-wavy">الكيمياء</span> أسهل مما تتخيل مع روز أكاديمي 🌹
                 </>
               ) : (
                 <>
-                  Master <span className="text-yellow-400">Chemistry</span> for High School with Rose Academy
+                  Master <span className="text-primary">Chemistry</span> for High School with Rose Academy
                 </>
               )}
             </motion.h1>
@@ -83,7 +83,7 @@ const IntroSection = () => {
             {/* Subtitle */}
             <motion.p
               variants={itemVariants}
-              className="text-lg sm:text-xl md:text-2xl text-gray-200 font-normal mb-8 leading-relaxed max-w-2xl"
+              className="text-lg sm:text-xl md:text-2xl text-gray-100 font-normal mb-8 leading-relaxed max-w-2xl"
             >
               {t("introSection.description")}
             </motion.p>
@@ -94,15 +94,15 @@ const IntroSection = () => {
               className="flex flex-wrap items-center gap-3 mb-8 text-sm sm:text-base"
             >
               <span className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 text-white">
-                <FaCheckCircle className="text-green-400" />
+                <FaCheckCircle className="text-primary" />
                 <span>الشرح بالنظام الجديد 2025</span>
               </span>
               <span className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 text-white">
-                <FaAtom className="text-cyan-400 animate-spin-slow" />
+                <FaAtom className="text-primary animate-spin-slow" />
                 <span>الكيمياء العضوية والكهربية</span>
               </span>
               <span className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 text-white">
-                <FaGraduationCap className="text-yellow-400" />
+                <FaGraduationCap className="text-yellow-300" />
                 <span>ضمان الـ 60/60</span>
               </span>
             </motion.div>
@@ -114,7 +114,7 @@ const IntroSection = () => {
             >
               <Link
                 to="/courses"
-                className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-950 px-8 py-3.5 text-lg font-bold shadow-xl hover:shadow-yellow-500/20 hover:scale-105 transition-all duration-300"
+                className="inline-flex items-center gap-3 rounded-full bg-primary text-gray-950 px-8 py-3.5 text-lg font-bold shadow-xl hover:shadow-primary/30 hover:scale-105 transition-all duration-300"
               >
                 <span>{t("introSection.startCourse")}</span>
                 <FaArrowRight className={isRTL ? "rotate-180" : ""} />
@@ -132,8 +132,8 @@ const IntroSection = () => {
             </motion.div>
 
             {/* Secondary Badge for Thanaweya Grades */}
-            <motion.div variants={itemVariants} className="mt-8 pt-6 border-t border-white/10 flex items-center gap-3 text-xs sm:text-sm text-gray-300">
-              <span className="font-bold text-yellow-300">المراحل المتاحة:</span>
+            <motion.div variants={itemVariants} className="mt-8 pt-6 border-t border-white/10 flex items-center gap-3 text-xs sm:text-sm text-gray-200">
+              <span className="font-bold text-primary">المراحل المتاحة:</span>
               <span className="px-2.5 py-1 rounded bg-white/10 font-medium">الصف الأول الثانوي</span>
               <span className="px-2.5 py-1 rounded bg-white/10 font-medium">الصف الثاني الثانوي</span>
               <span className="px-2.5 py-1 rounded bg-white/10 font-medium">الصف الثالث الثانوي</span>
@@ -157,8 +157,8 @@ const IntroSection = () => {
                 />
 
                 {/* Floating Chemistry Badge 1 */}
-                <div className="absolute top-4 left-4 bg-gray-950/80 backdrop-blur-md border border-rose-500/40 text-white p-3 rounded-2xl shadow-xl flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400 text-xl font-bold">
+                <div className="absolute top-4 left-4 bg-gray-950/80 backdrop-blur-md border border-primary/40 text-white p-3 rounded-2xl shadow-xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary text-xl font-bold">
                     60
                   </div>
                   <div>
@@ -168,8 +168,8 @@ const IntroSection = () => {
                 </div>
 
                 {/* Floating Chemistry Badge 2 */}
-                <div className="absolute bottom-6 right-4 bg-gray-950/80 backdrop-blur-md border border-yellow-500/40 text-white p-3 rounded-2xl shadow-xl flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400 text-xl">
+                <div className="absolute bottom-6 right-4 bg-gray-950/80 backdrop-blur-md border border-secondary/40 text-white p-3 rounded-2xl shadow-xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary text-xl">
                     🧪
                   </div>
                   <div>
