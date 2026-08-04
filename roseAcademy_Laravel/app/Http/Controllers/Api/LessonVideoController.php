@@ -827,12 +827,41 @@ public function upload(Request $request, $lessonId)
             'ext'        => $ext,
         ]);
 
+        // If serving .m3u8 playlist, rewrite segment URLs to include token & auth query params
+        if ($ext === 'm3u8') {
+            $content = file_get_contents($videoPath);
+
+            $queryParams = [];
+            if ($request->has('_t')) {
+                $queryParams['_t'] = $request->query('_t');
+            }
+            if ($request->has('signature')) {
+                $queryParams['signature'] = $request->query('signature');
+            }
+            if ($request->has('expires')) {
+                $queryParams['expires'] = $request->query('expires');
+            }
+
+            if (!empty($queryParams)) {
+                $queryString = '?' . http_build_query($queryParams);
+                $content = preg_replace('/^([^\s#]+\.ts)$/m', '$1' . $queryString, $content);
+            }
+
+            return response($content, 200, [
+                'Content-Type'                => 'application/vnd.apple.mpegurl',
+                'Content-Disposition'         => 'inline',
+                'Cache-Control'               => 'no-cache, no-store, must-revalidate',
+                'Access-Control-Allow-Origin' => '*',
+            ]);
+        }
+
         return response()->file($videoPath, [
-            'Content-Type'        => $mimeType,
-            'Content-Disposition' => 'inline',
-            'Accept-Ranges'       => 'bytes',
-            'Cache-Control'       => $ext === 'm3u8' ? 'no-cache, no-store, must-revalidate' : 'public, max-age=31536000',
-            'X-Accel-Buffering'   => 'no',
+            'Content-Type'                => $mimeType,
+            'Content-Disposition'         => 'inline',
+            'Accept-Ranges'               => 'bytes',
+            'Cache-Control'               => 'public, max-age=31536000',
+            'X-Accel-Buffering'           => 'no',
+            'Access-Control-Allow-Origin' => '*',
         ]);
     }
 
